@@ -29,6 +29,8 @@ namespace cata_ui
     };
     class ui_fragmant
     {
+        std::string text;
+        point location;
     public:
         ui_fragmant( ui_fragment_type t, point p, std::string& text );
         ui_fragmant( ui_fragment_type t, point p, std::string& text, std::string& action );
@@ -38,7 +40,7 @@ namespace cata_ui
         bool show_mnemonic;
 
         ui_fragment_type get_fragment_type();
-        point get_point();
+        point get_location();
         std::string get_text();
     };
 }
