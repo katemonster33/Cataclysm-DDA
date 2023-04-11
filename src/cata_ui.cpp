@@ -19,6 +19,13 @@ cata_ui::action_handler::action_handler( std::string &action_id,
     this->tl = tl;
 }
 
+cata_ui::action_handler::action_handler( const cata_ui::action_handler &other )
+{
+    this->action_id = other.action_id;
+    this->on_action_execute = other.on_action_execute;
+    this->tl = other.tl;
+}
+
 void cata_ui::dialog::register_action_handler( action_handler &handler )
 {
     action_handler_map[handler.action_id] = handler;
@@ -29,8 +36,13 @@ void cata_ui::dialog::close()
     is_open = false;
 }
 
-cata_ui::dialog::dialog( std::string& category, point p, std::string title, int height, int width )
+cata_ui::dialog::dialog( std::string &category, point p, std::string title, int height,
+                         int width ) : fragment()
 {
+    location = p;
+    this->height = height;
+    this->width = width;
+    this->text = title;
     is_open = true;
 }
 
@@ -47,11 +59,32 @@ void cata_ui::dialog::on_click_default_handler( fragment *fragment )
 
 }
 
+void cata_ui::button::draw( catacurses::window &win )
+{
+    point scrolled_location = get_scrolled_location();
+    if( scrolled_location.y >= 0 ) {
+        std::string btn_text = string_format( "<%s>", this->text );
+
+        if( show_mnemonic ) {
+            size_t mnemonic_idx = btn_text.find( mnemonic );
+            std::string mnemonic_colorized_str = colorize( std::string( 1, mnemonic ), get_color() );
+            if( mnemonic_idx != -1 ) {
+                btn_text.erase( btn_text.begin() + mnemonic_idx );
+                btn_text.insert( mnemonic_idx, mnemonic_colorized_str );
+            } else {
+                btn_text.insert( 1, mnemonic_colorized_str );
+            }
+        }
+        nc_color color_cpy = color;
+        print_colored_text( win, scrolled_location, color, color, btn_text );
+    }
+}
+
+
 cata_ui::fragment *cata_ui::dialog::add_button( point p, std::string &text, std::string &action )
 {
-    cata_ui::fragment *fragment = new cata_ui::fragment;
+    cata_ui::button *fragment = new cata_ui::button;
 
-    fragment->type = cata_ui::fragment_type::button;
     fragment->location = p;
     fragment->text = text;
     fragment->action = action;
@@ -62,9 +95,8 @@ cata_ui::fragment *cata_ui::dialog::add_button( point p, std::string &text, std:
 cata_ui::fragment *cata_ui::dialog::add_button_toggle( point p, std::string &text,
         std::string &action, int toggle_group_index )
 {
-    cata_ui::fragment *fragment = new cata_ui::fragment;
+    cata_ui::button *fragment = new cata_ui::button;
 
-    fragment->type = cata_ui::fragment_type::button_toggle;
     fragment->location = p;
     fragment->text = text;
     fragment->action = action;
@@ -75,9 +107,8 @@ cata_ui::fragment *cata_ui::dialog::add_button_toggle( point p, std::string &tex
 cata_ui::fragment *cata_ui::dialog::add_text_field( point p, std::string &text, int width,
         bool selectable )
 {
-    cata_ui::fragment *fragment = new cata_ui::fragment;
+    cata_ui::text_block *fragment = new cata_ui::text_block;
 
-    fragment->type = cata_ui::fragment_type::text;
     fragment->location = p;
     fragment->text = text;
     fragment->selectable = selectable;
@@ -101,41 +132,49 @@ cata_ui::fragment *cata_ui::dialog::get_active_fragment()
     return active;
 }
 
-void cata_ui::dialog::draw(catacurses::window &w, fragment* fragment ) {
-    switch( fragment->type ) {
-    case cata_ui::fragment_type::button:
-    case cata_ui::fragment_type::button_toggle:
-        break;
-    case cata_ui::fragment_type::text:
-        if(fragment->trim_width ){
-            trim_and_print( w, fragment->location, fragment->trim_width, fragment->color, fragment->text );
+void cata_ui::text_block::draw( catacurses::window &win )
+{
+    point scrolled_location = get_scrolled_location();
+    if( scrolled_location.y >= 0 ) {
+        if( width ) {
+            trim_and_print( win, scrolled_location, width, color, text );
         } else {
-            print_colored_text( w, fragment->location, fragment->color, fragment->color, fragment->text );
+            print_colored_text( win, scrolled_location, color, color, text );
         }
-        break;
     }
 }
 
-void cata_ui::dialog::on_redraw( ui_adaptor& adaptor, catacurses::window& w )
+void cata_ui::dialog::draw( catacurses::window &w )
 {
-    for( fragment* ctrl : controls ) {
+    if( this->invalidated ) {
+        werase( w );
+        draw_border( w, BORDER_COLOR, text );
+    }
+    for( fragment *ctrl : controls ) {
         if( ctrl->invalidated || this->invalidated ) {
-            draw( w, ctrl );
+            ctrl->draw( w );
+            ctrl->invalidated = false;
         }
     }
+    this->invalidated = false;
+}
+
+void cata_ui::dialog::on_redraw( ui_adaptor &adaptor, catacurses::window &w )
+{
+    draw( w );
 }
 
 void cata_ui::dialog::show()
 {
     ui_adaptor adaptor;
-    catacurses::window w_dialog;
+    catacurses::window w_dialog = catacurses::newwin( height, width, location );
 
     input_context ctx( category );
-    for( std::pair<std::string, action_handler> kv : action_handler_map ) {
+    for( std::pair<const std::string, cata_ui::action_handler> kv : action_handler_map ) {
         ctx.register_action( kv.second.action_id, kv.second.tl );
     }
-    adaptor.on_redraw( [this, w_dialog]( ui_adaptor & adaptor ) {
-        on_redraw( &adaptor );
+    adaptor.on_redraw( [&]( ui_adaptor & adaptor ) {
+        on_redraw( adaptor, w_dialog );
     } );
 
     while( is_open ) {
@@ -150,25 +189,33 @@ void cata_ui::dialog::show()
     }
 }
 
-cata_ui::fragment::fragment( cata_ui::fragment_type t, point p, std::string &text )
+cata_ui::fragment::fragment()
 {
-    this->type = t;
-    this->location = p;
-    this->text = text;
+    width = 0;
+    height = 1;
+    max_height = 1;
+    parent = nullptr;
+    this->enabled = true;
+    this->invalidated = true;
 }
 
-cata_ui::fragment::fragment( cata_ui::fragment_type t, point p, std::string &text,
-                             std::string &action )
+point cata_ui::fragment::get_scrolled_location(point offset)
 {
-    this->type = t;
-    this->location = p;
-    this->text = text;
-    this->action = action;
+    int y_offset = location.y;
+    if(parent)
+    {
+        y_offset -= parent->location.y;
+    }
+    return point( location.x + offset.x, y_offset + offset.y );
 }
 
-cata_ui::fragment_type cata_ui::fragment::get_fragment_type()
+nc_color cata_ui::fragment::get_color()
 {
-    return type;
+    if( highlighted ) {
+        return hilite( color );
+    } else {
+        return color;
+    }
 }
 
 point cata_ui::fragment::get_location()
@@ -181,21 +228,42 @@ std::string cata_ui::fragment::get_text()
     return text;
 }
 
-std::string cata_ui::fragment::get_action()
+std::string cata_ui::button::get_action()
 {
     return action;
-}
-
-bool cata_ui::fragment::run_custom_click_handler()
-{
-    if( on_click ) {
-        on_click.value();
-        return true;
-    }
-    return false;
 }
 
 void cata_ui::fragment::invalidate()
 {
     invalidated = true;
+}
+
+/// <summary>
+/// meant to be overridden by any classes which could have heights of > 1 or variable determined by their contents
+/// </summary>
+/// <returns></returns>
+int cata_ui::fragment::get_actual_height()
+{
+    return height;
+}
+
+void cata_ui::scroll_view::draw( catacurses::window &win )
+{
+    if( invalidated ) {
+        int content_height = 0;
+        for( fragment *child : children ) {
+            int tmp_height = child->get_location().y + child->get_actual_height();
+            if( tmp_height > content_height ) {
+                content_height = tmp_height;
+            }
+        }
+        draw_scrollbar( win, scroll_height, height, content_height, location );
+    }
+    for( fragment *child : children ) {
+        if( child->invalidated || invalidated ) {
+            child->draw( win );
+            child->invalidated = false;
+        }
+    }
+    invalidated = false;
 }

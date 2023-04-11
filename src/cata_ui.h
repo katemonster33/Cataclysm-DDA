@@ -7,71 +7,112 @@
 class ui_adaptor;
 class input_context;
 
+namespace catacurses
+{
+class window;
+}
+
 namespace cata_ui
 {
-enum class fragment_type {
-    button,
-    button_toggle,
-    text,
-    text_multiline,
-    edit
-};
 
 struct action_handler {
     std::string action_id;
     translation tl;
     std::function<void()> on_action_execute;
 
+    action_handler()
+    {
+    }
     action_handler( std::string &action_id, std::function<void()> on_action_execute );
     action_handler( std::string &action_id, std::function<void()> on_action_execute, translation tl );
+    action_handler(const action_handler &other);
 };
 
 class fragment
 {
         friend class dialog;
-        fragment_type type;
+        friend class scroll_view;
+    protected:
         std::string text;
         point location;
         nc_color color;
-        std::string action;
         bool invalidated;
-        int trim_width;
-
+        int height;
+        int max_height;
+        int width;
+        scroll_view *parent;
+        bool highlighted;
         fragment();
 
     public:
-        class dialog *parent;
 
-        bool show_mnemonic;
         bool enabled;
         bool selectable;
-        std::optional<std::function<void()>> on_click;
-        std::optional<std::function<void()>> on_select;
-
-        fragment_type get_fragment_type();
+        int get_actual_height();
         point get_location();
+        point get_scrolled_location(point offset = point_zero);
+        nc_color get_color();
         std::string get_text();
-        std::string get_action();
-        bool run_custom_click_handler();
         void invalidate();
+        virtual void draw( catacurses::window &win ) = 0;
 };
 
-class dialog
+class edit_text : public fragment
+{
+public:
+    void draw(catacurses::window &win);
+};
+
+class scroll_view : public fragment
+{
+    friend class dialog;
+public:
+    int scroll_height;
+    void draw(catacurses::window &win);
+
+    std::vector<fragment *> children;
+};
+
+class button : public fragment
+{
+    friend class dialog;
+    std::string action;
+    char mnemonic;
+public:
+    bool show_mnemonic;
+
+    std::string get_action();
+
+    std::optional<std::function<void()>> on_click;
+    std::optional<std::function<void()>> on_select;
+
+    void draw(catacurses::window &win);
+};
+
+class button_toggle : public button
+{
+    friend class dialog;
+    int toggle_group;
+};
+
+class text_block : public fragment
+{
+    friend class dialog;
+public:
+    void draw(catacurses::window &win);
+};
+
+class dialog : fragment
 {
         std::map<std::string, action_handler> action_handler_map;
         std::vector<fragment *> controls;
         std::string category;
-        std::string title;
-        point location;
-        int height;
-        int width;
         fragment *active;
         bool is_open;
         bool trim_width;
-        bool invalidated;
         void on_click_default_handler( fragment *fragment );
-        void on_redraw( ui_adaptor& adaptor, catacurses::window& w );
-        void draw( catacurses::window& w, fragment* fragment );
+        void on_redraw( ui_adaptor &adaptor, catacurses::window &w );
+        void draw( catacurses::window &w );
 
     public:
         void register_action_handler( action_handler &handler );
