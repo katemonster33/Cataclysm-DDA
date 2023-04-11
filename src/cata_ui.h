@@ -31,11 +31,11 @@ class fragment
         friend class dialog;
         fragment_type type;
         std::string text;
-        std::string action;
         point location;
+        nc_color color;
+        std::string action;
         bool invalidated;
         int trim_width;
-        nc_color color;
 
         fragment();
 
