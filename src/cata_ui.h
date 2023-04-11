@@ -2,6 +2,7 @@
 #include "point.h"
 #include "translation.h"
 #include <map>
+#include "color.h"
 
 class ui_adaptor;
 class input_context;
@@ -16,17 +17,29 @@ enum class fragment_type {
     edit
 };
 
+struct action_handler {
+    std::string action_id;
+    translation tl;
+    std::function<void()> on_action_execute;
+
+    action_handler( std::string &action_id, std::function<void()> on_action_execute );
+    action_handler( std::string &action_id, std::function<void()> on_action_execute, translation tl );
+};
+
 class fragment
 {
+        friend class dialog;
         fragment_type type;
         std::string text;
         std::string action;
         point location;
+        bool invalidated;
+        int trim_width;
+        nc_color color;
+
+        fragment();
 
     public:
-        fragment( fragment_type t, point p, std::string &text );
-        fragment( fragment_type t, point p, std::string &text, std::string &action );
-        fragment( fragment_type t, point p, std::string &text, std::function<void()> custom_click_handler );
         class dialog *parent;
 
         bool show_mnemonic;
@@ -40,25 +53,29 @@ class fragment
         std::string get_text();
         std::string get_action();
         bool run_custom_click_handler();
+        void invalidate();
 };
 
 class dialog
 {
-        std::map<std::string, std::pair<translation, std::function<void()>>> action_handler_map;
-        std::vector<fragment*> controls;
+        std::map<std::string, action_handler> action_handler_map;
+        std::vector<fragment *> controls;
         std::string category;
+        std::string title;
+        point location;
+        int height;
+        int width;
         fragment *active;
         bool is_open;
         bool trim_width;
-
+        bool invalidated;
         void on_click_default_handler( fragment *fragment );
-        void on_redraw(ui_adaptor *adaptor);
+        void on_redraw( ui_adaptor& adaptor, catacurses::window& w );
+        void draw( catacurses::window& w, fragment* fragment );
 
     public:
-        void register_action_handler( const std::string &action_id, std::function<void()> callback );
-        void register_action_handler( const std::string &action_id, const translation t,
-                                      std::function<void()> callback );
-        dialog( std::string &category );
+        void register_action_handler( action_handler &handler );
+        dialog( std::string &category, point p, std::string title, int height, int width );
         ~dialog();
 
         fragment *add_button( point p, std::string &text, std::string &action );
