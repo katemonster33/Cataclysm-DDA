@@ -39,9 +39,10 @@ void cata_ui::dialog::close()
 cata_ui::dialog::dialog( std::string &category, point p, std::string title, int height,
                          int width ) : fragment()
 {
-    location = p;
-    this->height = height;
-    this->width = width;
+    b.x = p.x;
+    b.y = p.y;
+    b.h = height;
+    b.w = width;
     this->text = title;
     is_open = true;
 }
@@ -61,7 +62,7 @@ void cata_ui::dialog::on_click_default_handler( fragment *fragment )
 
 void cata_ui::button::draw( catacurses::window &win )
 {
-    point scrolled_location = get_scrolled_location();
+    point scrolled_location;// = get_scrolled_location();
     if( scrolled_location.y >= 0 ) {
         std::string btn_text = string_format( "<%s>", this->text );
 
@@ -80,71 +81,62 @@ void cata_ui::button::draw( catacurses::window &win )
     }
 }
 
-
-cata_ui::fragment *cata_ui::dialog::add_button( point p, std::string &text, std::string &action )
-{
-    cata_ui::button *fragment = new cata_ui::button;
-
-    fragment->location = p;
-    fragment->text = text;
-    fragment->action = action;
-    controls.push_back( fragment );
-    return fragment;
-}
-
-cata_ui::fragment *cata_ui::dialog::add_button_toggle( point p, std::string &text,
-        std::string &action, int toggle_group_index )
-{
-    cata_ui::button *fragment = new cata_ui::button;
-
-    fragment->location = p;
-    fragment->text = text;
-    fragment->action = action;
-    controls.push_back( fragment );
-    return fragment;
-}
-
-cata_ui::fragment *cata_ui::dialog::add_text_field( point p, std::string &text, int width,
-        bool selectable )
-{
-    cata_ui::text_block *fragment = new cata_ui::text_block;
-
-    fragment->location = p;
-    fragment->text = text;
-    fragment->selectable = selectable;
-    controls.push_back( fragment );
-    return fragment;
-}
-
-cata_ui::fragment *cata_ui::dialog::add_text_multiline( point p, std::string &text, int width,
-        int height )
-{
-    return nullptr;
-}
-
-cata_ui::fragment *cata_ui::dialog::add_edit_field( point p, int width )
-{
-    return nullptr;
-}
-
 cata_ui::fragment *cata_ui::dialog::get_active_fragment()
 {
     return active;
 }
 
-void cata_ui::text_block::draw( catacurses::window &win )
+void cata_ui::text_block::draw( catacurses::window &win, bounds &box, bool pretend)
 {
-    point scrolled_location = get_scrolled_location();
-    if( scrolled_location.y >= 0 ) {
-        if( width ) {
-            trim_and_print( win, scrolled_location, width, color, text );
-        } else {
-            print_colored_text( win, scrolled_location, color, color, text );
+    int draw_x = 0;
+    if(b.x) draw_x = b.x.value();
+    else if(box.x) draw_x = box.x.value();
+
+    int draw_y = 0;
+    if(b.y) draw_y = b.y.value();
+    else if(box.y) draw_y = box.y.value();
+
+    int draw_height = 0;
+    if(b.h) draw_height = b.h.value();
+    else if(box.h) draw_height = box.h.value();
+
+    int draw_width = 0;
+    if(b.w) draw_width = b.w.value();
+    else if(box.w) draw_width = box.w.value();
+
+    int max_w = 0;
+
+    if(draw_width) // is our width constrained?
+    {
+        if(draw_height > 1)
+        {
+            std::vector<std::string> splitstr = foldstring(text, draw_width);
+            for(int i = 0; i < draw_height && i < splitstr.size(); i++)
+            {
+                print_colored_text(win, point(draw_x, draw_y+ i), color, color, splitstr[i]);
+            }
+        }
+        else
+        {
+            trim_and_print(win, point(draw_x, draw_y), draw_width, color, text);
+            max_w = draw_width;
         }
     }
+    else // if not, just print until we reach the end of the window
+    {
+        std::string no_color = remove_color_tags(text);
+        if(no_color.length() > max_w)
+        {
+            draw_width = text.length();
+        }
+        print_colored_text(win, point(draw_x, draw_y), color, color, text);
+    }
+
+    box.h = draw_height;
+    box.w = draw_width;
 }
 
-void cata_ui::dialog::draw( catacurses::window &w )
+void cata_ui::dialog::draw(catacurses::window &w, bounds &box, bool pretend)
 {
     if( this->invalidated ) {
         werase( w );
@@ -152,7 +144,7 @@ void cata_ui::dialog::draw( catacurses::window &w )
     }
     for( fragment *ctrl : controls ) {
         if( ctrl->invalidated || this->invalidated ) {
-            ctrl->draw( w );
+            ctrl->draw( w, box, pretend );
             ctrl->invalidated = false;
         }
     }
@@ -161,13 +153,18 @@ void cata_ui::dialog::draw( catacurses::window &w )
 
 void cata_ui::dialog::on_redraw( ui_adaptor &adaptor, catacurses::window &w )
 {
-    draw( w );
+    cata_ui::bounds b;
+    b.x = 0;
+    b.y = 0;
+    b.w = catacurses::getmaxx(w);
+    b.h = catacurses::getmaxy(w);
+    draw( w, b, false );
 }
 
 void cata_ui::dialog::show()
 {
     ui_adaptor adaptor;
-    catacurses::window w_dialog = catacurses::newwin( height, width, location );
+    catacurses::window w_dialog = catacurses::newwin( b.h.value(), b.w.value(), point(b.x.value(), b.y.value()));
 
     input_context ctx( category );
     for( std::pair<const std::string, cata_ui::action_handler> kv : action_handler_map ) {
@@ -191,22 +188,33 @@ void cata_ui::dialog::show()
 
 cata_ui::fragment::fragment()
 {
-    width = 0;
-    height = 1;
-    max_height = 1;
     parent = nullptr;
     this->enabled = true;
     this->invalidated = true;
 }
 
-point cata_ui::fragment::get_scrolled_location(point offset)
+cata_ui::fragment &cata_ui::fragment::x(int x)
 {
-    int y_offset = location.y;
-    if(parent)
-    {
-        y_offset -= parent->location.y;
-    }
-    return point( location.x + offset.x, y_offset + offset.y );
+    b.x = x;
+    return *this;
+}
+
+cata_ui::fragment &cata_ui::fragment::y(int y)
+{
+    b.y = y;
+    return *this;
+}
+
+cata_ui::fragment &cata_ui::fragment::h(int h)
+{
+    b.h = h;
+    return *this;
+}
+
+cata_ui::fragment &cata_ui::fragment::w(int w)
+{
+    b.w = w;
+    return *this;
 }
 
 nc_color cata_ui::fragment::get_color()
@@ -216,11 +224,6 @@ nc_color cata_ui::fragment::get_color()
     } else {
         return color;
     }
-}
-
-point cata_ui::fragment::get_location()
-{
-    return location;
 }
 
 std::string cata_ui::fragment::get_text()
@@ -238,27 +241,25 @@ void cata_ui::fragment::invalidate()
     invalidated = true;
 }
 
-/// <summary>
-/// meant to be overridden by any classes which could have heights of > 1 or variable determined by their contents
-/// </summary>
-/// <returns></returns>
-int cata_ui::fragment::get_actual_height()
+cata_ui::scroll_view::scroll_view(cata_ui::fragment *child)
 {
-    return height;
+    this->child = child;
+    cata_assert(this->child != nullptr);
 }
 
-void cata_ui::scroll_view::draw( catacurses::window &win )
+void cata_ui::scroll_view::draw( catacurses::window &win, cata_ui::bounds &box, bool pretend )
 {
-    if( invalidated ) {
-        int content_height = 0;
-        for( fragment *child : children ) {
-            int tmp_height = child->get_location().y + child->get_actual_height();
-            if( tmp_height > content_height ) {
-                content_height = tmp_height;
-            }
-        }
-        draw_scrollbar( win, scroll_height, height, content_height, location );
+    int draw_h = TERMY;
+    if(box.h) draw_h = box.h.value();
+    if(!box.w || !box.h)
+    {
+        child->draw(win, box, true);
+        cata_assert(box.w && box.h);
     }
+    int content_height = box.h.value();
+    draw_scrollbar( win, scroll_height, height, content_height, location );
+    box.x = box.x.value()++;
+
     for( fragment *child : children ) {
         if( child->invalidated || invalidated ) {
             child->draw( win );
