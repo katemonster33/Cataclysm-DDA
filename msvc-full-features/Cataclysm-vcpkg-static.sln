@@ -17,14 +17,23 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cataclysm-vcpkg-static", "Cataclysm-vcpkg-static.vcxproj", "{19F0BE17-3DAF-40E8-A9D2-904A56382E54}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cataclysm-test-vcpkg-static", "Cataclysm-test-vcpkg-static.vcxproj", "{2C1ECEE1-9686-4C3C-8DE1-88996EE43378}"
+	ProjectSection(ProjectDependencies) = postProject
+		{19F0BE17-3DAF-40E8-A9D2-904A56382E54} = {19F0BE17-3DAF-40E8-A9D2-904A56382E54}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cataclysm-lib-vcpkg-static", "Cataclysm-lib-vcpkg-static.vcxproj", "{0009BB11-11AD-4C14-A5FC-D882A942C00B}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JsonFormatter-vcpkg-static", "JsonFormatter-vcpkg-static.vcxproj", "{35D74C75-FC4A-442F-AF44-43BC9D845BAF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{19F0BE17-3DAF-40E8-A9D2-904A56382E54} = {19F0BE17-3DAF-40E8-A9D2-904A56382E54}
+		{2C1ECEE1-9686-4C3C-8DE1-88996EE43378} = {2C1ECEE1-9686-4C3C-8DE1-88996EE43378}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JsonFormatter-lib-vcpkg-static", "JsonFormatter-lib-vcpkg-static.vcxproj", "{534A4E38-96A1-40E4-BDA7-8D17607F0270}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "flatbuffers", "flatbuffers.vcxproj", "{8A533A64-435D-4D4F-9FF0-1E97AACE9374}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ImGui-lib-vcpkg-static", "ImGui-lib-vcpkg-static.vcxproj", "{0C0B2BEA-311F-473C-9652-87923EF639E3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -178,6 +187,30 @@ Global
 		{8A533A64-435D-4D4F-9FF0-1E97AACE9374}.Release-NoTiles|x64.Build.0 = Release|x64
 		{8A533A64-435D-4D4F-9FF0-1E97AACE9374}.Release-NoTiles|x86.ActiveCfg = Release|Win32
 		{8A533A64-435D-4D4F-9FF0-1E97AACE9374}.Release-NoTiles|x86.Build.0 = Release|Win32
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug|ARM64EC.ActiveCfg = Debug|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug|ARM64EC.Build.0 = Debug|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug|x64.ActiveCfg = Debug|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug|x64.Build.0 = Debug|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug|x86.ActiveCfg = Debug|Win32
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug|x86.Build.0 = Debug|Win32
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug-NoTiles|ARM64EC.ActiveCfg = Debug|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug-NoTiles|ARM64EC.Build.0 = Debug|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug-NoTiles|x64.ActiveCfg = Debug|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug-NoTiles|x64.Build.0 = Debug|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug-NoTiles|x86.ActiveCfg = Debug|Win32
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Debug-NoTiles|x86.Build.0 = Debug|Win32
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release|ARM64EC.ActiveCfg = Release|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release|ARM64EC.Build.0 = Release|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release|x64.ActiveCfg = Release|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release|x64.Build.0 = Release|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release|x86.ActiveCfg = Release|Win32
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release|x86.Build.0 = Release|Win32
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release-NoTiles|ARM64EC.ActiveCfg = Release|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release-NoTiles|ARM64EC.Build.0 = Release|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release-NoTiles|x64.ActiveCfg = Release|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release-NoTiles|x64.Build.0 = Release|x64
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release-NoTiles|x86.ActiveCfg = Release|Win32
+		{0C0B2BEA-311F-473C-9652-87923EF639E3}.Release-NoTiles|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

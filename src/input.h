@@ -711,6 +711,7 @@ class input_context
         // Helper functions to be used as @ref input_event_filter
         static bool disallow_lower_case_or_non_modified_letters( const input_event &evt );
         static bool allow_all_keys( const input_event &evt );
+        static void set_action_override( const std::string &action );
 
         /**
          * Get a description text for the key/other input method associated

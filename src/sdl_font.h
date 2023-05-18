@@ -83,10 +83,14 @@ class CachedTTFFont : public Font
                          const std::string &ch,
                          const point &p,
                          unsigned char color, float opacity = 1.0f ) override;
+
+        const struct ImFont *Get_ImGuiFont();
+
     protected:
         SDL_Texture_Ptr create_glyph( const SDL_Renderer_Ptr &renderer, const std::string &ch, int color );
 
         TTF_Font_Ptr font;
+        ImFont *imgui_font;
         // Maps (character code, color) to SDL_Texture*
 
         struct key_t {

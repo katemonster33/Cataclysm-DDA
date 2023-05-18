@@ -1,8 +1,9 @@
-#if defined(TILES)
+﻿#if defined(TILES)
 #include "sdl_font.h"
 
 #include "font_loader.h"
 #include "output.h"
+#include "imgui/imgui.h"
 
 #if defined(_WIN32)
 #   if 1 // HACK: Hack to prevent reordering of #include "platform_win.h" by IWYU
@@ -204,6 +205,23 @@ CachedTTFFont::CachedTTFFont(
         PATH_INFO::user_font(), PATH_INFO::fontdir()
     };
 
+    ImGuiIO &io = ImGui::GetIO();
+    static const ImWchar ranges[] = {
+        0x0020, 0x052F,
+        0x1D00, 0x1DFF,
+        0x2000, 0x206F,
+        0x20A0, 0x20CF,
+        0x2100, 0x214F,
+        0x2190, 0x22FF,
+        0x2500, 0x27BF,
+        0xC900, 0xC9FF,
+        //0x0020, 0xCFFF,
+        0
+    };
+    imgui_font = io.Fonts->AddFontFromFileTTF( typeface.c_str(), fontsize, nullptr, ranges );
+    if( imgui_font && !io.FontDefault && typeface.find( "unifont", 0 ) != std::string::npos ) {
+        io.FontDefault = imgui_font;
+    }
 #if defined(_WIN32)
     constexpr UINT max_dir_len = 256;
     char buf[max_dir_len];
@@ -278,6 +296,11 @@ CachedTTFFont::CachedTTFFont(
         throw std::runtime_error( TTF_GetError() );
     }
     TTF_SetFontStyle( font.get(), TTF_STYLE_NORMAL );
+}
+
+const ImFont *CachedTTFFont::Get_ImGuiFont()
+{
+    return imgui_font;
 }
 
 SDL_Texture_Ptr CachedTTFFont::create_glyph( const SDL_Renderer_Ptr &renderer,

@@ -72,6 +72,8 @@
 #include "string_formatter.h"
 #include "ui_manager.h"
 #include "wcwidth.h"
+#include "imgui/imgui_impl_sdl2.h"
+#include "imgui/imgui_impl_sdlrenderer.h"
 
 #if defined(__linux__)
 #   include <cstdlib> // getenv()/setenv()
@@ -289,14 +291,14 @@ static void WinCreate()
     SDL_SetHint( SDL_HINT_TOUCH_MOUSE_EVENTS, "0" );
 #endif
 #endif
-
-    ::window.reset( SDL_CreateWindow( "",
-                                      SDL_WINDOWPOS_CENTERED_DISPLAY( display ),
-                                      SDL_WINDOWPOS_CENTERED_DISPLAY( display ),
-                                      WindowWidth,
-                                      WindowHeight,
-                                      window_flags
-                                    ) );
+    SDL_Window *win_nonconst = SDL_CreateWindow( "",
+                               SDL_WINDOWPOS_CENTERED_DISPLAY( display ),
+                               SDL_WINDOWPOS_CENTERED_DISPLAY( display ),
+                               WindowWidth,
+                               WindowHeight,
+                               window_flags
+                                               );
+    ::window.reset( win_nonconst );
     throwErrorIf( !::window, "SDL_CreateWindow failed" );
 
 #if !defined(__ANDROID__)
@@ -357,10 +359,11 @@ static void WinCreate()
 #if defined(SDL_HINT_RENDER_BATCHING)
     SDL_SetHint( SDL_HINT_RENDER_BATCHING, get_option<bool>( "RENDER_BATCHING" ) ? "1" : "0" );
 #endif
+    SDL_Renderer *renderer_nonconst = nullptr;
     if( !software_renderer ) {
         dbg( D_INFO ) << "Attempting to initialize accelerated SDL renderer.";
-
-        renderer.reset( SDL_CreateRenderer( ::window.get(), renderer_id, SDL_RENDERER_ACCELERATED |
+        renderer.reset( renderer_nonconst = SDL_CreateRenderer( ::window.get(), renderer_id,
+                                            SDL_RENDERER_ACCELERATED |
                                             SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE ) );
         if( printErrorIf( !renderer,
                           "Failed to initialize accelerated renderer, falling back to software rendering" ) ) {
@@ -378,7 +381,7 @@ static void WinCreate()
         if( get_option<bool>( "FRAMEBUFFER_ACCEL" ) ) {
             SDL_SetHint( SDL_HINT_FRAMEBUFFER_ACCELERATION, "1" );
         }
-        renderer.reset( SDL_CreateRenderer( ::window.get(), -1,
+        renderer.reset( renderer_nonconst = SDL_CreateRenderer( ::window.get(), -1,
                                             SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE ) );
         throwErrorIf( !renderer, "Failed to initialize software renderer" );
         throwErrorIf( !SetupRenderTarget(),
@@ -424,6 +427,22 @@ static void WinCreate()
     } else {
         geometry = std::make_unique<DefaultGeometryRenderer>();
     }
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    ( void )io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplSDL2_InitForSDLRenderer( win_nonconst, renderer_nonconst );
+    ImGui_ImplSDLRenderer_Init( renderer_nonconst );
+
+    //io.Fonts->AddFontDefault();
+    //io.Fonts->Build();
 }
 
 static void WinDestroy()
@@ -431,7 +450,7 @@ static void WinDestroy()
 #if defined(__ANDROID__)
     touch_joystick.reset();
 #endif
-
+    ImGui_ImplSDL2_Shutdown();
     shutdown_sound();
     tilecontext.reset();
     gamepad::quit();
@@ -530,10 +549,18 @@ void refresh_display()
         return;
     }
 
+    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+
+    ImGui::NewFrame();
+    ui_adaptor::redraw_all_invalidated( true );
+
     // Select default target (the window), copy rendered buffer
     // there, present it, select the buffer as target again.
     SetRenderTarget( renderer, nullptr );
+
     ClearScreen();
+    ImGui::Render();
 #if defined(__ANDROID__)
     SDL_Rect dstrect = get_android_render_rect( TERMINAL_WIDTH * fontwidth,
                        TERMINAL_HEIGHT * fontheight );
@@ -548,6 +575,7 @@ void refresh_display()
     }
     draw_virtual_joystick();
 #endif
+    ImGui_ImplSDLRenderer_RenderDrawData( ImGui::GetDrawData() );
     SDL_RenderPresent( renderer.get() );
     SetRenderTarget( renderer, display_buffer );
 }
@@ -1078,7 +1106,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         };
 
         // draws a black rectangle behind a label for visibility and legibility
-        const auto label_bg = [&]( const tripoint_abs_sm & pos, const std::string & name ) {
+        const auto label_bg = [&]( const tripoint_abs_sm & pos, const std::string &name ) {
             const int name_length = utf8_width( name );
             const point draw_pos = abs_sm_to_draw_label( pos, name_length );
             SDL_Rect clipRect = { draw_pos.x, draw_pos.y, name_length * fontwidth, fontheight };
@@ -1142,7 +1170,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
     if( !notes_window_text.empty() ) {
         constexpr int padding = 2;
 
-        const auto draw_note_text = [&]( const point & draw_pos, const std::string & name,
+        const auto draw_note_text = [&]( const point & draw_pos, const std::string &name,
         nc_color & color ) {
             char note_fg_color = color == c_yellow ? 11 :
                                  cata_cursesport::colorpairs[color.to_color_pair_index()].FG;
@@ -3009,6 +3037,7 @@ static void CheckMessages()
     bool render_target_reset = false;
 
     while( SDL_PollEvent( &ev ) ) {
+        ImGui_ImplSDL2_ProcessEvent( &ev );
         switch( ev.type ) {
             case SDL_WINDOWEVENT:
                 switch( ev.window.event ) {
@@ -3500,6 +3529,9 @@ static void CheckMessages()
         ui_manager::invalidate( rectangle<point>( point_zero, point( WindowWidth, WindowHeight ) ), false );
         ui_manager::redraw_invalidated();
     }
+    if( ui_adaptor::has_imgui() ) {
+        needupdate = true;
+    }
     if( needupdate ) {
         try_sdl_update();
     }
@@ -3822,7 +3854,7 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
     // we can skip screen update if `needupdate` is false to improve performance during mouse
     // move events.
     wnoutrefresh( catacurses::stdscr );
-    if( needupdate ) {
+    if( needupdate || ui_adaptor::has_imgui() ) {
         refresh_display();
     }
 
@@ -3935,6 +3967,17 @@ static window_dimensions get_window_dimensions( const catacurses::window &win,
     dim.window_size_pixel.y = dim.window_size_cell.y * dim.scaled_font_size.y;
 
     return dim;
+}
+
+
+int get_window_width()
+{
+    return WindowWidth;
+}
+
+int get_window_height()
+{
+    return WindowHeight;
 }
 
 window_dimensions get_window_dimensions( const catacurses::window &win )

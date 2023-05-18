@@ -67,6 +67,7 @@ class window;
 class ui_adaptor
 {
     public:
+        bool is_imgui;
         using redraw_callback_t = std::function<void( ui_adaptor & )>;
         using screen_resize_callback_t = std::function<void( ui_adaptor & )>;
 
@@ -97,7 +98,7 @@ class ui_adaptor
         explicit ui_adaptor( debug_message_ui );
         ui_adaptor( const ui_adaptor &rhs ) = delete;
         ui_adaptor( ui_adaptor &&rhs ) = delete;
-        ~ui_adaptor();
+        virtual ~ui_adaptor();
 
         ui_adaptor &operator=( const ui_adaptor &rhs ) = delete;
         ui_adaptor &operator=( ui_adaptor &&rhs ) = delete;
@@ -210,8 +211,9 @@ class ui_adaptor
 
         /* See the `ui_manager` namespace */
         static void invalidate( const rectangle<point> &rect, bool reenable_uis_below );
-        static void redraw();
-        static void redraw_invalidated();
+        static bool has_imgui();
+        static void redraw_all();
+        static void redraw_all_invalidated( bool draw_imgui = false );
         static void screen_resized();
     private:
         static void invalidation_consistency_and_optimization();
@@ -236,6 +238,8 @@ class ui_adaptor
 
         mutable bool invalidated;
         mutable bool deferred_resize;
+    protected:
+        virtual void redraw() {}
 };
 
 /**

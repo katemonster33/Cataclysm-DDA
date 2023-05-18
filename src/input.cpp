@@ -1183,6 +1183,17 @@ std::string input_context::describe_key_and_name( const std::string &action_desc
     return get_desc( action_descriptor, get_action_name( action_descriptor ), evt_filter );
 }
 
+// In ImGui, there are lots of cases where we need to execute code related to an action while drawing.
+//  We can't always do this cleanly during drawing, so we set action_override here so that the next
+//  time input_context::handle_input gets no input, it instead returns action_override.
+std::string action_override;
+std::string action_override_old;
+
+void input_context::set_action_override( const std::string &action )
+{
+    action_override = action;
+}
+
 const std::string &input_context::handle_input()
 {
     return handle_input( timeout );
@@ -1245,7 +1256,13 @@ const std::string &input_context::handle_input( const int timeout )
         // enters something proper.
     }
     inp_mngr.set_timeout( old_timeout );
-    return *result;
+    if( next_action.type == input_event_t::error && !action_override.empty() ) {
+        action_override_old = action_override;
+        action_override = "";
+        return action_override_old;
+    } else {
+        return *result;
+    }
 }
 
 void input_context::register_directions()
