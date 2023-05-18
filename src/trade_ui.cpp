@@ -19,6 +19,13 @@
 #include "point.h"
 #include "string_formatter.h"
 #include "type_id.h"
+#include "messages.h"
+#include "imgui/imgui.h"
+#include "cata_imgui.h"
+
+extern inventory_entry *mouse_hovered_entry;
+extern inventory_entry *keyboard_focused_entry;
+extern const item_location *entry_to_be_focused;
 
 static const flag_id json_flag_NO_UNWIELD( "NO_UNWIELD" );
 static const item_category_id item_category_ITEMS_WORN( "ITEMS_WORN" );
@@ -26,14 +33,9 @@ static const item_category_id item_category_WEAPON_HELD( "WEAPON_HELD" );
 
 namespace
 {
-point _pane_orig( int side )
+cataimgui::bounds _get_pane_bounds( int side )
 {
-    return { side > 0 ? TERMX / 2 : 0, trade_ui::header_size };
-}
-
-point _pane_size()
-{
-    return { TERMX / 2, TERMY - _pane_orig( 0 ).y };
+    return { side > 0 ? ImGui::GetContentRegionAvail().x / 2.0f + ImGui::GetCursorPosX() : -1.0f, ImGui::GetCursorPosY(), ImGui::GetContentRegionAvail().x / 2.0f, float( ImGui::GetContentRegionAvail().y )};
 }
 
 } // namespace
@@ -102,17 +104,18 @@ bool trade_preset::cat_sort_compare( const inventory_entry &lhs, const inventory
 }
 
 trade_ui::trade_ui( party_t &you, npc &trader, currency_t cost, std::string title )
-    : _upreset{ you, trader }, _tpreset{ trader, you },
-      _panes{ std::make_unique<pane_t>( this, trader, _tpreset, std::string(), _pane_size(),
-                                        _pane_orig( -1 ) ),
-              std::make_unique<pane_t>( this, you, _upreset, std::string(), _pane_size(),
-                                        _pane_orig( 1 ) ) },
+    : cataimgui::window( title, ImGuiWindowFlags_AlwaysAutoResize ),
+      _upreset{ you, trader }, _tpreset{ trader, you },
+      _panes { std::make_unique<pane_t>( this, trader, _tpreset, std::string() ),
+               std::make_unique<pane_t>( this, you, _upreset, std::string() ) },
       _parties{ &trader, &you }, _title( std::move( title ) )
 
 {
     _panes[_you]->add_character_items( you );
     _panes[_you]->add_nearby_items( 1 );
     _panes[_trader]->add_character_items( trader );
+    _panes[_trader]->set_title( "Trader Inventory" ); // DO NOT REMOVE: ImGui needs each child window to have unique titles/IDs
+    _panes[_you]->set_title( "Your Inventory" );
     if( trader.is_shopkeeper() ) {
         _panes[_trader]->categorize_map_items( true );
 
@@ -147,20 +150,7 @@ trade_ui::trade_ui( party_t &you, npc &trader, currency_t cost, std::string titl
     }
     _balance = _cost;
 
-    _panes[_you]->get_active_column().on_deactivate();
-
-    _header_ui.on_screen_resize( [&]( ui_adaptor & ui ) {
-        _header_w = catacurses::newwin( header_size, TERMX, point_zero );
-        ui.position_from_window( _header_w );
-        ui.invalidate_ui();
-        resize();
-    } );
-    _header_ui.mark_resize();
-    _header_ui.on_redraw( [this]( ui_adaptor const & /* ui */ ) {
-        werase( _header_w );
-        _draw_header();
-        wnoutrefresh( _header_w );
-    } );
+    _panes[_you]->on_deactivate();
 }
 
 void trade_ui::pushevent( event const &ev )
@@ -172,7 +162,11 @@ trade_ui::trade_result_t trade_ui::perform_trade()
 {
     _exit = false;
     _traded = false;
-
+    inventory_entry *last_focused_entry = nullptr;
+    std::vector<inventory_entry *> ss = _panes[_cpane]->get_items();
+    if( !ss.empty() ) {
+        _panes[_cpane]->highlight_one_of( { ss[0]->any_item() } );
+    }
     while( !_exit ) {
         _panes[_cpane]->execute();
 
@@ -180,6 +174,21 @@ trade_ui::trade_result_t trade_ui::perform_trade()
             event const ev = _queue.front();
             _queue.pop();
             _process( ev );
+        }
+        if( last_focused_entry != mouse_hovered_entry ) {
+            if( mouse_hovered_entry ) {
+                int new_cpane = 0;
+                for( new_cpane = 0; new_cpane < 2; new_cpane++ ) {
+                    for( inventory_entry *ent : _panes[new_cpane]->get_items() ) {
+                        // selected entry belongs to this pane? break - we've figured out the selected pane
+                        if( ent == mouse_hovered_entry ) {
+                            _cpane = new_cpane;
+                            break;
+                        }
+                    }
+                }
+            }
+            last_focused_entry = mouse_hovered_entry;
         }
     }
 
@@ -199,7 +208,8 @@ void trade_ui::recalc_values_cpane()
 {
     _trade_values[_cpane] = 0;
 
-    for( entry_t const &it : _panes[_cpane]->to_trade() ) {
+    select_t all_selected = _panes[_cpane]->to_trade();
+    for( entry_t const &it : all_selected ) {
         // FIXME: cache trading_price
         _trade_values[_cpane] +=
             npc_trading::trading_price( *_parties[-_cpane + 1], *_parties[_cpane], it );
@@ -207,14 +217,14 @@ void trade_ui::recalc_values_cpane()
     if( !_parties[_trader]->as_npc()->will_exchange_items_freely() ) {
         _balance = _cost + _trade_values[_you] - _trade_values[_trader];
     }
-    _header_ui.invalidate_ui();
+    //_header_ui.invalidate_ui();
 }
 
 void trade_ui::autobalance()
 {
     int const sign = _cpane == _you ? -1 : 1;
     if( ( sign < 0 && _balance < 0 ) || ( sign > 0 && _balance > 0 ) ) {
-        inventory_entry &entry = _panes[_cpane]->get_active_column().get_highlighted();
+        inventory_entry &entry = _panes[_cpane]->get_highlighted();
         size_t const avail = entry.get_available_count() - entry.chosen_count;
         double const price = npc_trading::trading_price( *_parties[-_cpane + 1], *_parties[_cpane],
                              entry_t{ entry.any_item(), 1 } ) * sign;
@@ -227,8 +237,8 @@ void trade_ui::autobalance()
 
 void trade_ui::resize()
 {
-    _panes[_you]->resize( _pane_size(), _pane_orig( 1 ) );
-    _panes[_trader]->resize( _pane_size(), _pane_orig( -1 ) );
+    _panes[_you]->resize( _get_pane_bounds( 1 ) );
+    _panes[_trader]->resize( _get_pane_bounds( -1 ) );
 }
 
 void trade_ui::_process( event const &ev )
@@ -245,8 +255,12 @@ void trade_ui::_process( event const &ev )
             break;
         }
         case event::SWITCH: {
-            _panes[_cpane]->get_ui()->invalidate_ui();
+            //_panes[_cpane]->get_ui()->invalidate_ui();
             _cpane = -_cpane + 1;
+            std::vector<inventory_entry *> items = _panes[_cpane]->get_items();
+            if( !items.empty() ) {
+                entry_to_be_focused = &items[0]->any_item();
+            }
             break;
         }
         case event::NEVENTS: {
@@ -254,6 +268,7 @@ void trade_ui::_process( event const &ev )
         }
     }
 }
+
 
 bool trade_ui::_confirm_trade() const
 {
@@ -283,10 +298,15 @@ bool trade_ui::_confirm_trade() const
     return false;
 }
 
-void trade_ui::_draw_header()
+cataimgui::bounds trade_ui::get_bounds()
 {
-    draw_border( _header_w, c_light_gray );
-    center_print( _header_w, 1, c_white, _title );
+    return { 0, 0, get_window_width() * 0.7f, float( get_window_height() ) };
+}
+
+ImVec2 window_size{ 0.0f, 0.0f };
+
+void trade_ui::draw_controls()
+{
     npc const &np = *_parties[_trader]->as_npc();
     nc_color const trade_color =
         npc_trading::npc_will_accept_trade( np, _balance ) ? c_green : c_red;
@@ -295,17 +315,138 @@ void trade_ui::_draw_header()
         cost_str = string_format( _balance >= 0 ? _( "Credit %s" ) : _( "Debt %s" ),
                                   format_money( std::abs( _balance ) ) );
     }
-    center_print( _header_w, 2, trade_color, cost_str );
-    mvwprintz( _header_w, { 1, 3 }, c_white, _parties[_trader]->get_name() );
-    right_print( _header_w, 3, 1, c_white, _( "You" ) );
-    center_print( _header_w, header_size - 1, c_white,
-                  string_format( _( "%s to switch panes" ),
-                                 colorize( _panes[_you]->get_ctxt()->get_desc(
-                                         trade_selector::ACTION_SWITCH_PANES ),
-                                           c_yellow ) ) );
-    center_print( _header_w, header_size - 2, c_white,
-                  string_format( _( "%s to auto balance with highlighted item" ),
-                                 colorize( _panes[_you]->get_ctxt()->get_desc(
-                                         trade_selector::ACTION_AUTOBALANCE ),
-                                           c_yellow ) ) );
+    draw_colored_text( cost_str, trade_color, cataimgui::text_align::Center );
+    draw_colored_text( _parties[_trader]->get_name(), c_white );
+    ImGui::SameLine();
+    draw_colored_text( _( "You" ), c_white, cataimgui::text_align::Right );
+    draw_colored_text( string_format( _( "%s to switch panes" ),
+                                      colorize( _panes[_you]->get_ctxt()->get_desc(
+                                              trade_selector::ACTION_SWITCH_PANES ),
+                                              c_yellow ) ), c_white, cataimgui::text_align::Center );
+    draw_colored_text( string_format( _( "%s to auto balance with highlighted item" ),
+                                      colorize( _panes[_you]->get_ctxt()->get_desc(
+                                              trade_selector::ACTION_AUTOBALANCE ),
+                                              c_yellow ) ), c_white, cataimgui::text_align::Center );
+    ImVec2 size_temp = ImGui::GetWindowSize();
+    if( size_temp.x != window_size.x || size_temp.y != window_size.y ) {
+        resize();
+        window_size = size_temp;
+    }
+    //_panes[0]->draw();
+    //ImGui::SameLine( 0, 0 );
+    //_panes[1]->draw();
+}
+
+trade_selector::trade_selector( trade_ui *parent, Character &u,
+                                inventory_selector_preset const &preset,
+                                std::string const &selection_column_title )
+    : inventory_drop_selector( parent, u, preset, selection_column_title ), _parent( parent ),
+      _ctxt_trade( "INVENTORY", keyboard_mode::keychar )
+{
+    window_flags = ImGuiWindowFlags_None;
+    _ctxt_trade.register_action( ACTION_SWITCH_PANES );
+    _ctxt_trade.register_action( ACTION_TRADE_CANCEL );
+    _ctxt_trade.register_action( ACTION_TRADE_OK );
+    _ctxt_trade.register_action( ACTION_AUTOBALANCE );
+    _ctxt_trade.register_action( "UP" );
+    _ctxt_trade.register_action( "DOWN" );
+    _ctxt_trade.register_action( "SELECT" );
+
+    // register mouse motion related actions so we can update the active _cpane
+    _ctxt_trade.register_action( "COORDINATE" );
+    _ctxt_trade.register_action( "MOUSE_MOVE" );
+
+    _ctxt_trade.register_action( "ANY_INPUT" );
+    // duplicate this action in the parent ctxt so it shows up in the keybindings menu
+    // CANCEL and OK are already set in inventory_selector
+    ctxt.register_action( ACTION_SWITCH_PANES );
+    ctxt.register_action( ACTION_AUTOBALANCE );
+    resize( {-1, -1, -1, -1} );
+    for( inventory_column *col : columns ) {
+        col->prepare_paging();
+    }
+    set_invlet_type( inventory_selector::SELECTOR_INVLET_ALPHA );
+    show_buttons = false;
+}
+
+trade_selector::select_t trade_selector::to_trade() const
+{
+    return to_use;
+}
+
+void trade_selector::execute()
+{
+    bool exit = false;
+
+    columns[0]->on_activate();
+
+    while( !exit ) {
+#if !(defined(WIN32) || defined(TILES))
+        ui_manager::redraw_invalidated();
+#endif
+        mouse_hovered_entry = nullptr;
+        keyboard_focused_entry = nullptr;
+        std::string const &action = _ctxt_trade.handle_input();
+        if( !is_open ) {
+            break;
+        }
+        if( action == ACTION_SWITCH_PANES ) {
+            _parent->pushevent( trade_ui::event::SWITCH );
+            columns[active_column_index]->on_deactivate();
+            exit = true;
+        } else if( action == ACTION_TRADE_OK ) {
+            _parent->pushevent( trade_ui::event::TRADEOK );
+            exit = true;
+        } else if( action == ACTION_TRADE_CANCEL || !is_open ) {
+            _parent->pushevent( trade_ui::event::TRADECANCEL );
+            exit = true;
+        } else if( action == ACTION_AUTOBALANCE ) {
+            _parent->autobalance();
+        } else if( action == "MOUSE_MOVE" ) {
+            // break out of the loop when the mouse is moved, this allows us to update the current pane
+            exit = true;
+        } else {
+            //if((action == "UP" || action == "DOWN") && keyboard_focused_entry != nullptr && !is_mine(*keyboard_focused_entry))
+            //{
+            //    _parent->pushevent(trade_ui::event::SWITCH);
+            //    break;
+            //}
+            input_event const iev = _ctxt_trade.get_raw_input();
+            inventory_input const input =
+                process_input( ctxt.input_to_action( iev ), iev.get_first_input() );
+            inventory_drop_selector::on_input( input );
+            if( input.action == "HELP_KEYBINDINGS" ) {
+                ctxt.display_menu();
+            }
+        }
+    }
+}
+
+std::vector<inventory_entry *> trade_selector::get_items()
+{
+    std::vector<inventory_entry *> output;
+    for( inventory_column *col : columns ) {
+        if( col->visible() ) {
+            std::vector<inventory_entry *> entries = col->get_entries( []( const inventory_entry & ent ) {
+                return ent.is_item();
+            } );
+            output.insert( output.end(), entries.begin(), entries.end() );
+        }
+    }
+    return output;
+}
+
+void trade_selector::on_toggle()
+{
+    _parent->recalc_values_cpane();
+}
+
+void trade_selector::resize( const cataimgui::bounds &pane_bounds )
+{
+    _fixed_bounds.emplace( pane_bounds );
+}
+
+input_context const *trade_selector::get_ctxt() const
+{
+    return &_ctxt_trade;
 }
