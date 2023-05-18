@@ -79,6 +79,10 @@ class window
         void add_child( window *child );
 };
 
+#if !(defined(TILES) || defined(WIN32))
+void init_pair( int p, int f, int b );
+void load_colors();
+#endif
 bool is_drag_drop_active();
 
 class popup : public window

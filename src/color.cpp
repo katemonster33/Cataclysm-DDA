@@ -23,6 +23,9 @@
 #include "string_formatter.h"
 #include "ui.h"
 #include "ui_manager.h"
+#if !(defined(TILES) || defined(WIN32))
+#include "imtui/imtui-impl-ncurses.h"
+#endif
 
 void nc_color::serialize( JsonOut &jsout ) const
 {
@@ -393,6 +396,9 @@ void color_manager::load_default()
         add_color( def_c_dark_gray_yellow, "c_dark_gray_yellow", color_pair( 78 ), def_c_yellow );
         add_color( def_c_dark_gray_magenta, "c_dark_gray_magenta", color_pair( 77 ), def_c_pink );
         add_color( def_c_dark_gray_cyan, "c_dark_gray_cyan", color_pair( 76 ), def_c_light_cyan );
+#if !(defined(TILES) || defined(WIN32))
+        //ImTui_ImplNcurses_SetAllocedPairCount( 79 );
+#endif
     } else {
         add_color( def_c_dark_gray, "c_dark_gray", color_pair( 30 ).bold(), def_i_dark_gray );
         add_color( def_h_dark_gray, "h_dark_gray", color_pair( 20 ).bold(), def_c_light_blue );
@@ -403,6 +409,9 @@ void color_manager::load_default()
         add_color( def_c_dark_gray_yellow, "c_dark_gray_yellow", color_pair( 48 ).bold(), def_c_yellow );
         add_color( def_c_dark_gray_magenta, "c_dark_gray_magenta", color_pair( 56 ).bold(), def_c_pink );
         add_color( def_c_dark_gray_cyan, "c_dark_gray_cyan", color_pair( 64 ).bold(), def_c_light_cyan );
+#if !(defined(TILES) || defined(WIN32))
+        //ImTui_ImplNcurses_SetAllocedPairCount( 71 );
+#endif
     }
 }
 

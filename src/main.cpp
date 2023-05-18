@@ -56,6 +56,12 @@
 #include "type_id.h"
 #include "ui_manager.h"
 
+#if !(defined(TILES) || defined(_WIN32))
+#include "imtui/imgui.h"
+#include "imtui/imtui-impl-ncurses.h"
+#include "imtui/imtui-impl-text.h"
+#endif
+
 #if defined(PREFIX)
 #   undef PREFIX
 #   include "prefix.h"
@@ -147,6 +153,11 @@ void exit_handler( int s )
         // Avoid capturing SIGABRT on exit on Android in crash report
         // Can be removed once the SIGABRT on exit problem is fixed
         signal( SIGABRT, SIG_DFL );
+#endif
+
+#if !(defined(TILES) || defined(_WIN32))
+        ImTui_ImplText_Shutdown();
+        ImTui_ImplNcurses_Shutdown();
 #endif
 
         exit( exit_status );

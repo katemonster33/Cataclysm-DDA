@@ -14,6 +14,12 @@
 #include "point.h"
 #include "sdltiles.h" // IWYU pragma: keep
 
+#if !(defined(TILES) || defined(_WIN32))
+#include "imtui/imgui.h"
+#include "imtui/imtui-impl-ncurses.h"
+#include "imtui/imtui-impl-text.h"
+#endif
+
 using ui_stack_t = std::vector<std::reference_wrapper<ui_adaptor>>;
 
 static bool redraw_in_progress = false;
@@ -334,11 +340,24 @@ void ui_adaptor::redraw_all()
     redraw_all_invalidated();
 }
 
+#if !(defined(TILES) || defined(_WIN32))
+extern ImTui::TScreen *imtui_screen;
+extern std::vector<std::pair<int, ImTui::mouse_event>> imtui_events_list;
+#endif
+
 void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
 {
     if( test_mode || ui_stack.empty() ) {
         return;
     }
+
+#if !(defined(TILES) || defined(_WIN32))
+    ImTui_ImplNcurses_NewFrame( /* imtui_events_list */ );
+    imtui_events_list.clear();
+    ImTui_ImplText_NewFrame();
+
+    ImGui::NewFrame();
+#endif
 
     restore_on_out_of_scope<bool> prev_redraw_in_progress( redraw_in_progress );
     restore_on_out_of_scope<bool> prev_restart_redrawing( restart_redrawing );
@@ -444,7 +463,15 @@ void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
             }
         }
     } while( restart_redrawing );
+
+#if !(defined(TILES) || defined(_WIN32))
+    ImGui::Render();
+
+    ImTui_ImplText_RenderDrawData( ImGui::GetDrawData(), imtui_screen );
+    ImTui_ImplNcurses_DrawScreen();
+#endif
 }
+
 
 void ui_adaptor::screen_resized()
 {

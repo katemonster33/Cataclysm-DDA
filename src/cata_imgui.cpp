@@ -5,10 +5,55 @@
 #include "color.h"
 #include "input.h"
 #include <type_traits>
+#if !(defined(TILES) || defined(WIN32))
+#include <imtui/imgui.h>
+#include <imtui/imgui_internal.h>
+#include "color_loader.h"
+
+struct RGBTuple {
+    uint8_t Blue;
+    uint8_t Green;
+    uint8_t Red;
+};
+
+struct pairs {
+    short FG;
+    short BG;
+};
+
+std::array<RGBTuple, color_loader<RGBTuple>::COLOR_NAMES_COUNT> rgbPalette;
+std::array<pairs, 100> colorpairs;   //storage for pair'ed colored
+
+void cataimgui::load_colors()
+{
+
+    color_loader<RGBTuple>().load( rgbPalette );
+}
+
+void cataimgui::init_pair( int p, int f, int b )
+{
+    colorpairs[p].FG = f;
+    colorpairs[p].BG = b;
+}
+
+template<>
+RGBTuple color_loader<RGBTuple>::from_rgb( const int r, const int g, const int b )
+{
+    RGBTuple result;
+    // Blue
+    result.Blue = b;
+    // Green
+    result.Green = g;
+    // Red
+    result.Red = r;
+    return result;
+}
+#else
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #include <SDL2/SDL_pixels.h>
 #include "sdl_utils.h"
+#endif
 
 void cataimgui::window::draw_colored_text( std::string const &text, const nc_color &color,
         text_align alignment )
@@ -52,10 +97,24 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
         if( i++ > 0 ) {
             ImGui::SameLine( 0, 0 );
         }
+#if !(defined(TILES) || defined(WIN32))
+        int pair_id = color.get_index();
+        pairs &pair = colorpairs[pair_id];
+
+        int palette_index = pair.FG != 0 ? pair.FG : pair.BG;
+        if( color.is_bold() ) {
+            palette_index += color_loader<RGBTuple>::COLOR_NAMES_COUNT / 2;
+        }
+        RGBTuple &rgbCol = rgbPalette[palette_index];
+        ImGui::TextColored( { static_cast<float>( rgbCol.Red / 255. ), static_cast<float>( rgbCol.Green / 255. ),
+                              static_cast<float>( rgbCol.Blue / 255. ), static_cast<float>( 255. ) },
+                            "%s", seg.c_str() );
+#else
         SDL_Color c = curses_color_to_SDL( color );
         ImGui::TextColored( { static_cast<float>( c.r / 255. ), static_cast<float>( c.g / 255. ),
                               static_cast<float>( c.b / 255. ), static_cast<float>( c.a / 255. ) },
                             "%s", seg.c_str() );
+#endif
     }
 }
 
@@ -153,7 +212,11 @@ void cataimgui::window::set_title( const std::string &title )
 
 void cataimgui::window::draw_header( std::string const &text )
 {
+#if !(defined(TILES) || defined(WIN32))
+    ImGui::Text( "%s", text.c_str() );
+#else
     ImGui::SeparatorText( text.c_str() );
+#endif
 }
 
 bool cataimgui::window::is_child_window_navigated()
