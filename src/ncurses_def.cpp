@@ -296,7 +296,7 @@ static_assert( catacurses::white == COLOR_WHITE,
 
 void catacurses::init_pair( const short pair, const base_color f, const base_color b )
 {
-    //ImTui_ImplNcurses_UploadColorPair( pair, static_cast<short>( f ), static_cast<short>( b ) );
+    ImTui_ImplNcurses_UploadColorPair( pair, static_cast<short>( f ), static_cast<short>( b ) );
     cataimgui::init_pair( pair, f, b );
     return curses_check_result( ::init_pair( pair, static_cast<short>( f ), static_cast<short>( b ) ),
                                 OK, "init_pair" );

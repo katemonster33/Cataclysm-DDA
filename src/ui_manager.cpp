@@ -352,7 +352,7 @@ void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
     }
 
 #if !(defined(TILES) || defined(_WIN32))
-    ImTui_ImplNcurses_NewFrame( /* imtui_events_list */ );
+    ImTui_ImplNcurses_NewFrame( imtui_events_list );
     imtui_events_list.clear();
     ImTui_ImplText_NewFrame();
 
