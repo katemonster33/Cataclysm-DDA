@@ -1,4 +1,4 @@
-#include "inventory_ui.h"
+﻿#include "inventory_ui.h"
 
 #include <cstdint>
 #include <optional>
@@ -863,6 +863,19 @@ void inventory_column::highlight( size_t new_index, scroll_direction dir )
     }
 }
 
+void inventory_column::calculate_cell_width( size_t index )
+{
+    cells[index].current_width = 0;
+    for( auto entry : entries ) {
+        inventory_entry::entry_cell_cache_t cache = entry.get_entry_cell_cache( parent_selector->preset );
+        std::string text_stripped = remove_color_tags( cache.text[index] );
+        if( text_stripped.length() > cells[index].current_width ) {
+            cells[index].current_width = text_stripped.length();
+        }
+    }
+    cells[index].current_width = (cells[index].current_width + 1) * fontwidth;
+}
+
 size_t inventory_column::next_highlightable_index( size_t index, scroll_direction dir ) const
 {
     if( entries.empty() ) {
@@ -1461,7 +1474,6 @@ int inventory_column::reassign_custom_invlets( int cur_idx, const std::string_vi
     return cur_idx;
 }
 
-
 class pocket_selector : public cataimgui::list_selector
 {
         item *drag_drop_source;
@@ -1516,117 +1528,112 @@ class pocket_selector : public cataimgui::list_selector
         }
 };
 
-inventory_entry &inventory_selector::draw_column( inventory_column *column, bool force_collate )
+inventory_entry& inventory_selector::draw_column( inventory_column* column, bool force_collate )
 {
+    const std::string& hl_option = get_option<std::string>( "INVENTORY_HIGHLIGHT" );
     static inventory_entry dummy( nullptr );
-    inventory_entry &ent = dummy;
-    for( inventory_entry &entry : column->entries ) {
-        const inventory_entry::entry_cell_cache_t &cache = entry.get_entry_cell_cache( preset );
-        if( entry.is_category() ) {
-            //const std::string cat_name = remove_color_tags( entry.get_category_ptr()->name() );
-
-            //draw_header( cat_name );
-            for( size_t index = 0; index < cache.text.size(); index++ ) {
-                if( index != 0 ) {
-                    ImGui::SameLine();
-                }
-                nc_color tmp = c_light_gray;
-                // right align any entry after the first, don't question it, it came from the original code
-                draw_colored_text( cache.text[index], tmp,
-                                   index == 0 ? cataimgui::text_align::Left : cataimgui::text_align::Right );
-            }
+    inventory_entry& ent = dummy;
+    for( inventory_entry& entry : column->entries ) {
+        const inventory_entry::entry_cell_cache_t& cache = entry.get_entry_cell_cache( preset );
+        ImGui::PushID( &entry );
+        int indent = column->get_entry_indent( entry );
+        ImGui::Indent( indent );
+        if( entry.chevron ) {
+            bool const hide_override = column->hide_entries_override && entry.any_item()->is_container();
+            nc_color const col = entry.is_collation_header() ? c_light_blue : hide_override ?
+                *column->hide_entries_override ? c_red : c_green : c_dark_gray;
+            bool const stat = entry.is_collation_entry() ||
+                !hide_override ? entry.collapsed : *column->hide_entries_override;
+            ImGui::Text( "%s", stat ? "▶" : "▼" );
+            ImGui::SameLine();
         }
-        if( entry.is_item() ) {
+        bool tmp_selected = entry.chosen_count > 0;
+        if( entry.get_invlet() ) {
+            ImGui::Text( "%c", '[' );
+            ImGui::SameLine( 0, 0 );
+            draw_colored_text( string_format( "%c", entry.get_invlet() ), entry.get_invlet_color() );
+            ImGui::SameLine( 0, 0 );
+            ImGui::Text( "%c", ']' );
+            ImGui::SameLine();
+        }
+        float text_width = ImGui::GetContentRegionAvail().x;
+        if( !cache.text.empty() ) {
+            auto orig_cpos = ImGui::GetCursorPos();
+            float current_xpos = ImGui::GetContentRegionAvail().x + orig_cpos.x;
+            for( size_t index = cache.text.size() - 1; index >= 1; index-- ) {
+                if( column->cells[index].current_width == 0 ) {
+                    column->calculate_cell_width( index );
+                }
+                current_xpos -= (column->cells[index].current_width);
 
-            ImGui::PushID( &entry );
-            int indent = column->get_entry_indent( entry );
-            ImGui::Indent( indent );
-            if( entry.chevron && ( column->collate_entries() || force_collate ) ) {
-                ImGui::SetNextItemOpen( !entry.collapsed );
-                ImGui::PushID( &entry.collapsed );
-                bool status = ImGui::TreeNode( "" );
-                if( status ) {
-                    ImGui::TreePop();
-                }
-                ImGui::PopID();
-                ImGui::SameLine();
-                column->set_collapsed( entry, !status );
+                ImGui::SetCursorPos( { current_xpos, orig_cpos.y } );
+                draw_colored_text( cache.text[index], c_light_gray );
+                text_width = current_xpos - orig_cpos.x;
             }
-            bool tmp_selected = entry.chosen_count > 0;
-            ImGui::PushTextWrapPos( 0.0f );
-            if( !entry.denial.has_value() || entry.denial->empty() ) {
-                if( entry_to_be_focused == &entry.any_item() ) {
-                    ImGui::SetKeyboardFocusHere( 0 );
-                    entry_to_be_focused = nullptr;
-                }
-                ImGui::Selectable( "", &tmp_selected );
-                if( drag_enabled ) {
-                    if( ImGui::BeginDragDropSource() ) {
-                        ImGui::SetDragDropPayload( "INVENTORY_ENTRY", &entry, sizeof( inventory_entry ) );
-                        int cell_index = 0;
-                        for( const auto &cell : cache.text ) {
-                            if( cell_index++ != 0 ) {
-                                ImGui::SameLine();
-                            }
-                            nc_color tmp = c_light_gray;
-                            draw_colored_text( cell, tmp );
-                        }
-                        ImGui::EndDragDropSource();
-                    }
-                    if( entry.chevron ) {
-                        if( ImGui::BeginDragDropTarget() ) {
-                            if( const ImGuiPayload *payload = ImGui::AcceptDragDropPayload( "INVENTORY_ENTRY" ) ) {
-                                inventory_entry *source_entry = static_cast<inventory_entry *>( payload->Data );
-                                drag_drop_item( source_entry->locations.back().get_item(),
-                                                entry.locations.back().get_item() );
-                            }
-                            ImGui::EndDragDropTarget();
-                        }
-                    }
-                }
-                //if(multiselect)
-                //{
-                //    entry.is_selected = tmp_selected;
-                //}
-                //else
-                //{
-                //    entry.is_selected = is_navigated;
-                //}
-                if( ImGui::IsItemFocused() ) {
-                    keyboard_focused_entry = &entry;
-                    ent = entry;
-                }
-                if( ImGui::IsItemHovered( ImGuiHoveredFlags_NoNavOverride ) ) {
-                    mouse_hovered_entry = &entry;
-                }
+            ImGui::SetCursorPos( orig_cpos );
+        }
+        if( entry.is_item() && entry_to_be_focused == &entry.any_item() ) {
+            ImGui::SetKeyboardFocusHere( 0 );
+            entry_to_be_focused = nullptr;
+        }
+        std::string text = cache.text[0];
+        nc_color color = cache.color;
+        bool* selectable = &tmp_selected;
+        if( entry.is_item() && !entry.is_selectable() ) {
+            text = remove_color_tags( text );
+            color = c_dark_gray;
+            selectable = nullptr;
+        } else if( entry.is_item() && entry.highlight_as_parent ) {
+            if( hl_option == "symbol" ) {
+                draw_colored_text( "<", h_white );
+                ImGui::SameLine( 0, 0 );
             } else {
-                ImGui::Text( "", &tmp_selected );
+                text = remove_color_tags( cache.text[0] );
+                color = c_white_white;
             }
-            if( entry.get_invlet() ) {
+        } else if( entry.is_item() && entry.highlight_as_child ) {
+            if( hl_option == "symbol" ) {
+                draw_colored_text( ">", h_white );
                 ImGui::SameLine( 0, 0 );
-                ImGui::Text( "%c", '[' );
-                ImGui::SameLine( 0, 0 );
-                nc_color invc = entry.get_invlet_color();
-                draw_colored_text( string_format( "%c", entry.get_invlet() ), invc );
-                ImGui::SameLine( 0, 0 );
-                ImGui::Text( "%c", ']' );
+            } else {
+                text = remove_color_tags( cache.text[0] );
+                color = c_black_white;
             }
-            cataimgui::text_align talign = cataimgui::text_align::Left;
-            for( const auto &cell : cache.text ) {
-                ImGui::SameLine();
-                nc_color tmp = c_light_gray;
-                if( talign == cataimgui::text_align::Right && ( entry.denial.has_value() &&
-                        !entry.denial->empty() ) ) {
-                    draw_colored_text( *entry.denial, c_red, talign );
-                    break;
-                }
-                draw_colored_text( cell, tmp, talign );
-                talign = cataimgui::text_align::Right; // right align any entry after the first, don't question it, it came from the original code
-            }
-            ImGui::Unindent( indent );
-            ImGui::PopTextWrapPos();
-            ImGui::PopID();
+        } else if( entry.is_category() || (entry.denial.has_value() && !entry.denial->empty()) ) {
+            selectable = nullptr;
         }
+
+        if( drag_enabled && selectable != nullptr ) {
+            // this empty object allows the drag-drop logic to work, without this it crashes and burns.
+            ImGui::Selectable( "", selectable );
+            ImGui::SameLine( 0, 0 );
+            if( ImGui::BeginDragDropSource() ) {
+                ImGui::SetDragDropPayload( "INVENTORY_ENTRY", &entry, sizeof( inventory_entry ) );
+                ImGui::Text( "%s", remove_color_tags( cache.text[0] ).c_str() );
+                ImGui::EndDragDropSource();
+            }
+            if( entry.chevron ) {
+                if( ImGui::BeginDragDropTarget() ) {
+                    if( const ImGuiPayload* payload = ImGui::AcceptDragDropPayload( "INVENTORY_ENTRY" ) ) {
+                        inventory_entry* source_entry = static_cast<inventory_entry*>(payload->Data);
+                        drag_drop_item( source_entry->locations.back().get_item(),
+                            entry.locations.back().get_item() );
+                    }
+                    ImGui::EndDragDropTarget();
+                }
+            }
+        }
+        draw_colored_text( text, color, cataimgui::text_align::Left, text_width, selectable );
+        if( ImGui::IsItemFocused() ) {
+            keyboard_focused_entry = &entry;
+            ent = entry;
+        }
+        if( ImGui::IsItemHovered( ImGuiHoveredFlags_NoNavOverride ) ) {
+            mouse_hovered_entry = &entry;
+        }
+
+        ImGui::Unindent( indent );
+        ImGui::PopID();
     }
 
     return ent;

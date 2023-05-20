@@ -492,17 +492,10 @@ class inventory_column
         virtual void cycle_hide_override();
 
     protected:
-        /**
-         * Move the selection.
-         */
-        //void move_selection( scroll_direction dir );
-        //void move_selection_page( scroll_direction dir );
-        //void scroll_selection_page( scroll_direction dir );
+
+        void calculate_cell_width( size_t index );
 
         size_t next_highlightable_index( size_t index, scroll_direction dir ) const;
-
-        //size_t page_of( size_t index ) const;
-        //size_t page_of( const inventory_entry &entry ) const;
 
         bool sort_compare( inventory_entry const &lhs, inventory_entry const &rhs );
         bool indented_sort_compare( inventory_entry const &lhs, inventory_entry const &rhs );
