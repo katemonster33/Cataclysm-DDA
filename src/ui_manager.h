@@ -240,6 +240,7 @@ class ui_adaptor
         mutable bool deferred_resize;
     protected:
         virtual void redraw() {}
+        virtual void resized() {}
 };
 
 /**
