@@ -873,7 +873,7 @@ void inventory_column::calculate_cell_width( size_t index )
             cells[index].current_width = text_stripped.length();
         }
     }
-    cells[index].current_width = (cells[index].current_width + 1) * fontwidth;
+    cells[index].current_width = ( cells[index].current_width + 1 ) * fontwidth;
 }
 
 size_t inventory_column::next_highlightable_index( size_t index, scroll_direction dir ) const
@@ -1528,22 +1528,22 @@ class pocket_selector : public cataimgui::list_selector
         }
 };
 
-inventory_entry& inventory_selector::draw_column( inventory_column* column, bool force_collate )
+inventory_entry &inventory_selector::draw_column( inventory_column *column, bool force_collate )
 {
-    const std::string& hl_option = get_option<std::string>( "INVENTORY_HIGHLIGHT" );
+    const std::string &hl_option = get_option<std::string>( "INVENTORY_HIGHLIGHT" );
     static inventory_entry dummy( nullptr );
-    inventory_entry& ent = dummy;
-    for( inventory_entry& entry : column->entries ) {
-        const inventory_entry::entry_cell_cache_t& cache = entry.get_entry_cell_cache( preset );
+    inventory_entry &ent = dummy;
+    for( inventory_entry &entry : column->entries ) {
+        const inventory_entry::entry_cell_cache_t &cache = entry.get_entry_cell_cache( preset );
         ImGui::PushID( &entry );
         int indent = column->get_entry_indent( entry );
         ImGui::Indent( indent );
         if( entry.chevron ) {
             bool const hide_override = column->hide_entries_override && entry.any_item()->is_container();
             nc_color const col = entry.is_collation_header() ? c_light_blue : hide_override ?
-                *column->hide_entries_override ? c_red : c_green : c_dark_gray;
+                                 *column->hide_entries_override ? c_red : c_green : c_dark_gray;
             bool const stat = entry.is_collation_entry() ||
-                !hide_override ? entry.collapsed : *column->hide_entries_override;
+                              !hide_override ? entry.collapsed : *column->hide_entries_override;
             ImGui::Text( "%s", stat ? "▶" : "▼" );
             ImGui::SameLine();
         }
@@ -1564,7 +1564,7 @@ inventory_entry& inventory_selector::draw_column( inventory_column* column, bool
                 if( column->cells[index].current_width == 0 ) {
                     column->calculate_cell_width( index );
                 }
-                current_xpos -= (column->cells[index].current_width);
+                current_xpos -= ( column->cells[index].current_width );
 
                 ImGui::SetCursorPos( { current_xpos, orig_cpos.y } );
                 draw_colored_text( cache.text[index], c_light_gray );
@@ -1578,7 +1578,7 @@ inventory_entry& inventory_selector::draw_column( inventory_column* column, bool
         }
         std::string text = cache.text[0];
         nc_color color = cache.color;
-        bool* selectable = &tmp_selected;
+        bool *selectable = &tmp_selected;
         if( entry.is_item() && !entry.is_selectable() ) {
             text = remove_color_tags( text );
             color = c_dark_gray;
@@ -1599,7 +1599,7 @@ inventory_entry& inventory_selector::draw_column( inventory_column* column, bool
                 text = remove_color_tags( cache.text[0] );
                 color = c_black_white;
             }
-        } else if( entry.is_category() || (entry.denial.has_value() && !entry.denial->empty()) ) {
+        } else if( entry.is_category() || ( entry.denial.has_value() && !entry.denial->empty() ) ) {
             selectable = nullptr;
         }
 
@@ -1614,10 +1614,10 @@ inventory_entry& inventory_selector::draw_column( inventory_column* column, bool
             }
             if( entry.chevron ) {
                 if( ImGui::BeginDragDropTarget() ) {
-                    if( const ImGuiPayload* payload = ImGui::AcceptDragDropPayload( "INVENTORY_ENTRY" ) ) {
-                        inventory_entry* source_entry = static_cast<inventory_entry*>(payload->Data);
+                    if( const ImGuiPayload *payload = ImGui::AcceptDragDropPayload( "INVENTORY_ENTRY" ) ) {
+                        inventory_entry *source_entry = static_cast<inventory_entry *>( payload->Data );
                         drag_drop_item( source_entry->locations.back().get_item(),
-                            entry.locations.back().get_item() );
+                                        entry.locations.back().get_item() );
                     }
                     ImGui::EndDragDropTarget();
                 }
@@ -2128,10 +2128,10 @@ void inventory_selector::rearrange_columns( size_t client_width )
         for( size_t index = 0; index < column->cells.size(); index++ ) {
             column->calculate_cell_width( index );
         }
-        max_width = std::max(max_width, column->get_cells_width());
+        max_width = std::max( max_width, column->get_cells_width() );
     }
     // does one column want to take up >50% of our window width? if so we've got problems
-    bool is_overflowed = (float(max_width) / client_width) > 0.6;
+    bool is_overflowed = ( float( max_width ) / client_width ) > 0.6;
     if( is_overflowed && !own_gear_column.empty() ) {
         if( own_inv_column.empty() ) {
             own_inv_column.set_indent_entries_override( own_gear_column.indent_entries() );
