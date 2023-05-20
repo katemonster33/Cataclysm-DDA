@@ -56,14 +56,14 @@ RGBTuple color_loader<RGBTuple>::from_rgb( const int r, const int g, const int b
 #endif
 
 void cataimgui::window::draw_colored_text( std::string const &text, const nc_color &color,
-        text_align alignment, float max_width, bool* is_selected )
+        text_align alignment, float max_width, bool *is_selected )
 {
     nc_color color_cpy = color;
     draw_colored_text( text, color_cpy, alignment, max_width, is_selected );
 }
 
 void cataimgui::window::draw_colored_text( std::string const &text, nc_color &color,
-        text_align alignment, float max_width, bool* is_selected )
+        text_align alignment, float max_width, bool *is_selected )
 {
     ImGui::PushID( text.c_str() );
     ImGui::PushTextWrapPos( max_width );
@@ -105,21 +105,21 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
         }
 #if !(defined(TILES) || defined(WIN32))
         int pair_id = color.get_index();
-        pairs& pair = colorpairs[pair_id];
+        pairs &pair = colorpairs[pair_id];
 
         int palette_index = pair.FG != 0 ? pair.FG : pair.BG;
         if( color.is_bold() ) {
             palette_index += color_loader<RGBTuple>::COLOR_NAMES_COUNT / 2;
         }
-        RGBTuple& rgbCol = rgbPalette[palette_index];
-        ImGui::TextColored( { static_cast<float>(rgbCol.Red / 255.), static_cast<float>(rgbCol.Green / 255.),
-                                static_cast<float>(rgbCol.Blue / 255.), static_cast<float>(255.) },
-            "%s", seg.c_str() );
+        RGBTuple &rgbCol = rgbPalette[palette_index];
+        ImGui::TextColored( { static_cast<float>( rgbCol.Red / 255. ), static_cast<float>( rgbCol.Green / 255. ),
+                              static_cast<float>( rgbCol.Blue / 255. ), static_cast<float>( 255. ) },
+                            "%s", seg.c_str() );
 #else
         SDL_Color c = curses_color_to_SDL( color );
-        ImGui::TextColored( { static_cast<float>(c.r / 255.), static_cast<float>(c.g / 255.),
-                                static_cast<float>(c.b / 255.), static_cast<float>(c.a / 255.) },
-            "%s", seg.c_str() );
+        ImGui::TextColored( { static_cast<float>( c.r / 255. ), static_cast<float>( c.g / 255. ),
+                              static_cast<float>( c.b / 255. ), static_cast<float>( c.a / 255. ) },
+                            "%s", seg.c_str() );
 #endif
     }
 
@@ -235,22 +235,22 @@ bool cataimgui::window::is_child_window_navigated()
 
 class cataimgui::window_impl : public ui_adaptor
 {
-    friend class cataimgui::window;
-    cataimgui::window* win_base;
-    bool is_resized;
-public:
-    window_impl( cataimgui::window* win ) : ui_adaptor() {
-        win_base = win;
-        is_resized = true;
-    }
+        friend class cataimgui::window;
+        cataimgui::window *win_base;
+        bool is_resized;
+    public:
+        window_impl( cataimgui::window *win ) : ui_adaptor() {
+            win_base = win;
+            is_resized = true;
+        }
 
-    void redraw() override {
-        win_base->draw();
-    }
+        void redraw() override {
+            win_base->draw();
+        }
 
-    void resized() override {
-        is_resized = true;
-    }
+        void resized() override {
+            is_resized = true;
+        }
 };
 
 cataimgui::window::window( int window_flags )
