@@ -54,9 +54,9 @@ class window
         window( std::string title, int window_flags = 0 );
         virtual ~window();
         void draw_colored_text( std::string const &text, const nc_color &color,
-                                text_align alignment = text_align::Left );
+                                text_align alignment = text_align::Left, float max_width = 0.0F, bool *is_selected = nullptr );
         void draw_colored_text( std::string const &text, nc_color &color,
-                                text_align alignment = text_align::Left );
+                                text_align alignment = text_align::Left, float max_width = 0.0F, bool* is_selected = nullptr );
         bool action_button( const std::string &action, const std::string &text );
         void draw_header( std::string const &text );
         bool get_is_open();
