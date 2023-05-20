@@ -2123,13 +2123,22 @@ void inventory_selector::rearrange_columns( size_t client_width )
     const item_location prev_selection = prev_entry.is_item() ?
                                          prev_entry.any_item() : item_location::nowhere;
     bool const front_only = prev_entry.is_collation_entry();
-    if( client_width < 700 && !own_gear_column.empty() ) {
+    size_t max_width = 0;
+    for( auto column : get_visible_columns() ) {
+        for( size_t index = 0; index < column->cells.size(); index++ ) {
+            column->calculate_cell_width( index );
+        }
+        max_width = std::max(max_width, column->get_cells_width());
+    }
+    // does one column want to take up >50% of our window width? if so we've got problems
+    bool is_overflowed = (float(max_width) / client_width) > 0.6;
+    if( is_overflowed && !own_gear_column.empty() ) {
         if( own_inv_column.empty() ) {
             own_inv_column.set_indent_entries_override( own_gear_column.indent_entries() );
         }
         own_gear_column.move_entries_to( own_inv_column );
     }
-    if( client_width < 700 && !map_column.empty() ) {
+    if( is_overflowed && !map_column.empty() ) {
         if( own_inv_column.empty() ) {
             own_inv_column.set_indent_entries_override( map_column.indent_entries() );
         }
@@ -3985,8 +3994,9 @@ void inventory_selector::draw_controls()
         ImGui::SameLine();
         action_button( "VIEW_CATEGORY_MODE", "Change View Mode" );
     }
-
-    prepare_layout();
+    if( is_resized() ) {
+        prepare_layout();
+    }
     int num_columns = 0;
     for( auto col : columns ) {
         if( col->visible() ) {

@@ -47,6 +47,7 @@ class window
         window *parent;
         bool open_popup_requested;
         dialog_result last_popup_result;
+        bounds cached_bounds;
     protected:
         window( int window_flags = 0 );
         window( window *parent, int window_flags = 0 );
@@ -67,6 +68,7 @@ class window
         void show_popup_async( const std::shared_ptr<popup> &next_popup );
         dialog_result show_popup( const std::shared_ptr<popup> &next_popup );
         virtual void draw();
+        bool is_resized();
 
     protected:
         bool is_open;

@@ -235,15 +235,22 @@ bool cataimgui::window::is_child_window_navigated()
 
 class cataimgui::window_impl : public ui_adaptor
 {
-        cataimgui::window *win_base;
-    public:
-        window_impl( cataimgui::window *win ) : ui_adaptor() {
-            win_base = win;
-        }
+    friend class cataimgui::window;
+    cataimgui::window* win_base;
+    bool is_resized;
+public:
+    window_impl( cataimgui::window* win ) : ui_adaptor() {
+        win_base = win;
+        is_resized = true;
+    }
 
-        void redraw() override {
-            win_base->draw();
-        }
+    void redraw() override {
+        win_base->draw();
+    }
+
+    void resized() override {
+        is_resized = true;
+    }
 };
 
 cataimgui::window::window( int window_flags )
@@ -281,29 +288,39 @@ cataimgui::window::~window()
     }
 }
 
+bool cataimgui::window::is_resized()
+{
+    return p_impl->is_resized;
+}
+
 void cataimgui::window::draw()
 {
     if( !is_open ) {
         return;
     }
-    bounds b = get_bounds();
+    bool handled_resize = false;
+    if( p_impl->is_resized ) {
+        cached_bounds = get_bounds();
+        // we want to make sure is_resized is able to be handled for at least a full frame
+        handled_resize = true;
+    }
     if( parent != nullptr ) {
-        if( b.x >= 0 ) {
-            ImGui::SetCursorPosX( b.x );
+        if( cached_bounds.x >= 0 ) {
+            ImGui::SetCursorPosX( cached_bounds.x );
         }
-        if( b.y >= 0 ) {
-            ImGui::SetCursorPosY( b.y );
+        if( cached_bounds.y >= 0 ) {
+            ImGui::SetCursorPosY( cached_bounds.y );
         }
-        if( ImGui::BeginChild( id.c_str(), { b.w, b.h }, false, window_flags ) ) {
+        if( ImGui::BeginChild( id.c_str(), { cached_bounds.w, cached_bounds.h }, false, window_flags ) ) {
             draw_controls();
         }
         ImGui::EndChild();
     } else {
-        if( b.x >= 0 && b.y >= 0 ) {
-            ImGui::SetNextWindowPos( { b.x, b.y } );
+        if( cached_bounds.x >= 0 && cached_bounds.y >= 0 ) {
+            ImGui::SetNextWindowPos( { cached_bounds.x, cached_bounds.y } );
         }
-        if( b.h > 0 && b.w > 0 ) {
-            ImGui::SetNextWindowSize( { b.w, b.h } );
+        if( cached_bounds.h > 0 && cached_bounds.w > 0 ) {
+            ImGui::SetNextWindowSize( { cached_bounds.w, cached_bounds.h } );
         }
         if( ImGui::Begin( id.c_str(), &is_open, window_flags ) ) {
             draw_controls();
