@@ -77,12 +77,39 @@ struct collation_meta_t {
 class inventory_entry
 {
     public:
-        std::vector<item_location> locations;
-
+        struct entry_cell_cache_t {
+            nc_color color = c_unset;
+            std::vector<std::string> text;
+            int lang_version = 0;
+        };
         size_t chosen_count = 0;
-        int custom_invlet = INT_MIN;
         std::string *cached_name = nullptr;
         std::string *cached_name_full = nullptr;
+
+        size_t generation = 0;
+    private:
+        mutable item_category const *custom_category = nullptr;
+    public:
+        // topmost visible parent, used for visibility checks
+        item_location topmost_parent;
+        std::shared_ptr<collation_meta_t> collation_meta;
+        std::vector<item_location> locations;
+        mutable std::optional<std::string> denial;
+    protected:
+        mutable std::optional<entry_cell_cache_t> entry_cell_cache;
+    public:
+        int custom_invlet = INT_MIN;
+        int indent = 0;
+        bool highlight_as_parent = false;
+        bool highlight_as_child = false;
+        bool collapsed = false;
+        bool chevron = false;
+        mutable bool enabled = true;
+        bool is_selected;
+    protected:
+        // indents the entry if it is contained in an item
+        bool _indent = true;
+    public:
 
         inventory_entry() = default;
 
@@ -103,14 +130,14 @@ class inventory_entry
                                   const size_t chosen_count = 0,
                                   size_t generation_number = 0,
                                   item_location topmost_parent = {}, bool chevron = false ) :
-            locations( locations ),
             chosen_count( chosen_count ),
-            topmost_parent( std::move( topmost_parent ) ),
             generation( generation_number ),
+            custom_category( custom_category ),
+            topmost_parent( std::move( topmost_parent ) ),
+            locations( locations ),
             chevron( chevron ),
             enabled( enabled ),
-            is_selected( false ),
-            custom_category( custom_category ) {
+            is_selected( false ){
         }
 
         bool operator==( const inventory_entry &other ) const;
@@ -183,18 +210,8 @@ class inventory_entry
         int get_invlet() const;
         nc_color get_invlet_color() const;
         void update_cache();
-        bool highlight_as_parent = false;
-        bool highlight_as_child = false;
-        bool collapsed = false;
-        // topmost visible parent, used for visibility checks
-        item_location topmost_parent;
-        std::shared_ptr<collation_meta_t> collation_meta;
-        size_t generation = 0;
-        bool chevron = false;
-        int indent = 0;
-        mutable bool enabled = true;
+
         void cache_denial( inventory_selector_preset const &preset ) const;
-        mutable std::optional<std::string> denial;
 
         void set_custom_category( const item_category *category ) {
             custom_category = category;
@@ -206,25 +223,12 @@ class inventory_entry
             }
             collation_meta.reset();
         }
-        struct entry_cell_cache_t {
-            nc_color color = c_unset;
-            std::vector<std::string> text;
-            int lang_version = 0;
-        };
 
         const entry_cell_cache_t &get_entry_cell_cache( inventory_selector_preset const &preset ) const;
         void make_entry_cell_cache( inventory_selector_preset const &preset,
                                     bool update_only = true ) const;
         void reset_entry_cell_cache() const;
 
-        bool is_selected;
-
-    private:
-        mutable item_category const *custom_category = nullptr;
-    protected:
-        // indents the entry if it is contained in an item
-        bool _indent = true;
-        mutable std::optional<entry_cell_cache_t> entry_cell_cache;
 
 };
 
@@ -351,7 +355,7 @@ class inventory_column
 {
         friend class inventory_selector;
     public:
-        inventory_column( class inventory_selector *parent,
+        explicit inventory_column( class inventory_selector *parent,
                           const inventory_selector_preset &preset = default_preset );
 
         virtual ~inventory_column() = default;
@@ -592,7 +596,7 @@ class inventory_selector : public cataimgui::window
                                      const inventory_selector_preset &preset = default_preset );
         inventory_selector( cataimgui::window *parent, Character &u,
                             const inventory_selector_preset &preset = default_preset );
-        virtual ~inventory_selector();
+        ~inventory_selector() override;
         /** These functions add items from map / vehicles. */
         bool add_contained_items( item_location &container );
         bool add_contained_items( item_location &container, inventory_column &column,
