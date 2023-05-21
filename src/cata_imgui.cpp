@@ -130,7 +130,6 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
 int cataimgui::window::draw_item_info_data( item_info_data &data )
 {
     std::string buffer;
-    int line_num = data.use_full_win || data.without_border ? 0 : 1;
     if( !data.get_item_name().empty() ) {
         buffer += data.get_item_name() + "\n";
     }
@@ -145,14 +144,11 @@ int cataimgui::window::draw_item_info_data( item_info_data &data )
 
     buffer += format_item_info( data.get_item_display(), data.get_item_compare() );
 
-    const int b = data.use_full_win ? 0 : ( data.without_border ? 1 : 2 );
-    int num_lines = 0;
     if( *data.ptr_selected < 0 ) {
         *data.ptr_selected = 0;
     }
 
-    const auto redraw = [this, data, &num_lines, buffer]() {
-        num_lines = 0;
+    const auto redraw = [this, data, buffer]() {
         if( !data.without_getch ) {
             if( !ImGui::Begin( data.get_item_name().c_str() ) ) {
                 ImGui::End();
@@ -162,16 +158,12 @@ int cataimgui::window::draw_item_info_data( item_info_data &data )
         std::stringstream sstr( buffer );
         std::string line;
         while( std::getline( sstr, line ) ) {
-            num_lines++;
             if( line == "--" ) {
                 ImGui::Separator();
             } else {
                 draw_colored_text( line, c_light_gray );
             }
         }
-        //if( !data.without_border ) {
-        //    draw_custom_border( win, buffer.empty() );
-        //}
         if( !data.without_getch ) {
             ImGui::End();
         }
@@ -339,6 +331,9 @@ void cataimgui::window::draw()
             }
         }
         ImGui::End();
+    }
+    if( handled_resize ) {
+        p_impl->is_resized = false;
     }
 }
 

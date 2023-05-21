@@ -849,7 +849,9 @@ void inventory_column::calculate_cell_width( size_t index )
             cells[index].current_width = text_stripped.length();
         }
     }
+#if (defined(WIN32) || defined(TILES))
     cells[index].current_width = ( cells[index].current_width + 1 ) * fontwidth;
+#endif
 }
 
 size_t inventory_column::next_highlightable_index( size_t index, scroll_direction dir ) const
@@ -1500,7 +1502,7 @@ class pocket_selector : public cataimgui::list_selector
         }
 };
 
-inventory_entry &inventory_selector::draw_column( inventory_column *column, bool force_collate )
+inventory_entry &inventory_selector::draw_column( inventory_column *column )
 {
     const std::string &hl_option = get_option<std::string>( "INVENTORY_HIGHLIGHT" );
     static inventory_entry dummy( nullptr );
@@ -1512,8 +1514,6 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column, bool
         ImGui::Indent( indent );
         if( entry.chevron ) {
             bool const hide_override = column->hide_entries_override && entry.any_item()->is_container();
-            nc_color const col = entry.is_collation_header() ? c_light_blue : hide_override ?
-                                 *column->hide_entries_override ? c_red : c_green : c_dark_gray;
             bool const stat = entry.is_collation_entry() ||
                               !hide_override ? entry.collapsed : *column->hide_entries_override;
             ImGui::Text( "%s", stat ? "▶" : "▼" );
@@ -2065,7 +2065,6 @@ void inventory_selector::rearrange_columns( size_t client_width )
     const inventory_entry &prev_entry = get_highlighted();
     const item_location prev_selection = prev_entry.is_item() ?
                                          prev_entry.any_item() : item_location::nowhere;
-    bool const front_only = prev_entry.is_collation_entry();
     size_t max_width = 0;
     for( auto column : get_visible_columns() ) {
         for( size_t index = 0; index < column->cells.size(); index++ ) {
@@ -2073,7 +2072,7 @@ void inventory_selector::rearrange_columns( size_t client_width )
         }
         max_width = std::max( max_width, column->get_cells_width() );
     }
-    // does one column want to take up >50% of our window width? if so we've got problems
+    // does one column want to take up >60% of our window width? if so we've got problems
     bool is_overflowed = ( float( max_width ) / client_width ) > 0.6;
     if( is_overflowed && !own_gear_column.empty() ) {
         if( own_inv_column.empty() ) {
@@ -2967,7 +2966,7 @@ inventory_multiselector::inventory_multiselector( Character &p,
 bool inventory_multiselector::is_mine( inventory_entry &entry )
 {
     for( inventory_column *col : columns ) {
-        std::vector<inventory_entry *> entries = col->get_entries( []( const inventory_entry & en ) {
+        std::vector<inventory_entry *> entries = col->get_entries( []( const inventory_entry & ) {
             return true;
         } );
         for( inventory_entry *ent : entries ) {
@@ -3917,7 +3916,7 @@ void inventory_selector::draw_controls()
             for( auto column : columns ) {
                 if( column->visible() ) {
                     if( ImGui::BeginChild( string_format( "COLUMN_%d", drawn_columns ).c_str() ) ) {
-                        inventory_entry &selected_entry = draw_column( column );
+                        draw_column( column );
                     }
                     ImGui::EndChild();
                     if( ++drawn_columns < num_columns ) {

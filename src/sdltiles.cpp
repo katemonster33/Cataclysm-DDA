@@ -1106,7 +1106,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
         };
 
         // draws a black rectangle behind a label for visibility and legibility
-        const auto label_bg = [&]( const tripoint_abs_sm & pos, const std::string &name ) {
+        const auto label_bg = [&]( const tripoint_abs_sm & pos, const std::string & name ) {
             const int name_length = utf8_width( name );
             const point draw_pos = abs_sm_to_draw_label( pos, name_length );
             SDL_Rect clipRect = { draw_pos.x, draw_pos.y, name_length * fontwidth, fontheight };
@@ -1170,7 +1170,7 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
     if( !notes_window_text.empty() ) {
         constexpr int padding = 2;
 
-        const auto draw_note_text = [&]( const point & draw_pos, const std::string &name,
+        const auto draw_note_text = [&]( const point & draw_pos, const std::string & name,
         nc_color & color ) {
             char note_fg_color = color == c_yellow ? 11 :
                                  cata_cursesport::colorpairs[color.to_color_pair_index()].FG;

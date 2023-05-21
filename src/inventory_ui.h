@@ -684,7 +684,7 @@ class inventory_selector : public cataimgui::window
 
         virtual void draw_controls() override;
         cataimgui::bounds get_bounds() override;
-        inventory_entry &draw_column( inventory_column *column, bool force_collate = false );
+        inventory_entry &draw_column( inventory_column *column );
 
         bool drag_drop_item( item *sourceItem, item *destItem );
 
