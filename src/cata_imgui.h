@@ -49,10 +49,10 @@ class window
         dialog_result last_popup_result;
         bounds cached_bounds;
     protected:
-        window( int window_flags = 0 );
-        window( window *parent, int window_flags = 0 );
+        explicit window( int window_flags = 0 );
+        explicit window( window *parent, int window_flags = 0 );
     public:
-        window( std::string title, int window_flags = 0 );
+        explicit window( std::string title, int window_flags = 0 );
         virtual ~window();
         void draw_colored_text( std::string const &text, const nc_color &color,
                                 text_align alignment = text_align::Left, float max_width = 0.0F, bool *is_selected = nullptr );
@@ -96,7 +96,7 @@ class popup : public window
     public:
         popup( std::string id, bool is_modal );
         popup( std::string id, bool is_modal, std::function<bool()> on_draw_callback );
-        virtual ~popup();
+        ~popup() override;
 
         void draw() override;
         void set_draw_callback( const std::function<bool()> &callback );
@@ -123,7 +123,7 @@ class message_box : public popup
 class string_input_box : public popup
 {
         std::string prompt;
-        char input[100];
+        std::array<char, 100> input;
     public:
         string_input_box( const std::string &title, const std::string &prompt );
         static dialog_result show( std::string prompt, std::string &input );
@@ -143,7 +143,7 @@ class list_selector : public popup
             bool is_selected;
         };
 
-        list_selector( std::string id );
+        explicit list_selector( std::string id );
         void add( litem it );
         void add( std::initializer_list<litem> &items );
         int get_selected_index();
@@ -151,6 +151,6 @@ class list_selector : public popup
         void draw_controls() override;
         std::vector<litem> items;
 };
-}
+} // namespace cataimgui
 
 

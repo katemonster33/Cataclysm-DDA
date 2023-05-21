@@ -566,7 +566,7 @@ cataimgui::dialog_result cataimgui::string_input_box::show( std::string prompt, 
 
 std::string cataimgui::string_input_box::get_input()
 {
-    return std::string( input );
+    return std::string( input.begin(), input.end() );
 }
 
 void cataimgui::string_input_box::draw_controls()
@@ -576,7 +576,7 @@ void cataimgui::string_input_box::draw_controls()
     if( !ImGui::IsAnyItemActive() ) {
         ImGui::SetKeyboardFocusHere( 0 );
     }
-    ImGui::InputText( "##inputtext", input, std::extent< decltype( input ) >::value );
+    ImGui::InputText( "##inputtext", input.data(), std::extent< decltype( input ) >::value );
     if( ImGui::Button( "OK" ) || ImGui::IsKeyDown( ImGuiKey_Enter ) ) {
         result = dialog_result::OKClicked;
     }
