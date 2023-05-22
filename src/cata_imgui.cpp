@@ -51,7 +51,6 @@ RGBTuple color_loader<RGBTuple>::from_rgb( const int r, const int g, const int b
 #else
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
-#include <SDL2/SDL_pixels.h>
 #include "sdl_utils.h"
 #endif
 

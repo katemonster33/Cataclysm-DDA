@@ -849,7 +849,9 @@ void inventory_column::calculate_cell_width( size_t index )
             cells[index].current_width = text_stripped.length();
         }
     }
+#if defined( TILES )
     cells[index].current_width = ( cells[index].current_width + 1 ) * fontwidth;
+#endif
 }
 
 size_t inventory_column::next_highlightable_index( size_t index, scroll_direction dir ) const
