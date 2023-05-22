@@ -10,13 +10,14 @@ add_library(
 
 set(THIRD_PARTY_SOURCE_DIR ${CMAKE_SOURCE_DIR}/src/third-party)
 
+# Flatbuffers
 file(GLOB FLATBUFFERS_HEADERS ${THIRD_PARTY_SOURCE_DIR}/flatbuffers/**/*.h)
 file(GLOB FLATBUFFERS_SOURCES ${THIRD_PARTY_SOURCE_DIR}/flatbuffers/*.cpp)
 
 add_library(
         flatbuffers
         STATIC
-        ${FLATBUFFER_HEADERS}
+        ${FLATBUFFERS_HEADERS}
         ${FLATBUFFERS_SOURCES})
 
 target_include_directories(
@@ -31,6 +32,13 @@ target_include_directories(
         PUBLIC
         ${CMAKE_SOURCE_DIR}/src)
 
+target_link_libraries(
+        third-party
+        INTERFACE
+        flatbuffers
+        )
+
+# GHC filesystem
 file(GLOB GHC_HEADERS ${THIRD_PARTY_SOURCE_DIR}/ghc/*.hpp)
 
 add_library(
@@ -51,5 +59,83 @@ target_include_directories(
 target_link_libraries(
         third-party
         INTERFACE
-        flatbuffers
-        ghc-filesystem)
+        ghc-filesystem
+        )
+
+# ImGUI
+if (TILES)
+        file(GLOB IMGUI_HEADERS ${THIRD_PARTY_SOURCE_DIR}/imgui/*.h)
+        file(GLOB IMGUI_SOURCES ${THIRD_PARTY_SOURCE_DIR}/imgui/*.cpp)
+
+        add_library(
+                imgui
+                STATIC
+                ${IMGUI_HEADERS}
+                ${IMGUI_SOURCES}
+                )
+
+        target_include_directories(
+                imgui
+                SYSTEM
+                PUBLIC
+                ${THIRD_PARTY_SOURCE_DIR}
+                )
+
+        target_include_directories(
+                imgui
+                SYSTEM
+                PRIVATE
+                ${SDL2_INCLUDE_DIR}/..
+                )
+
+        target_compile_options(
+                imgui
+                PRIVATE
+                -Wno-format
+                -Wno-old-style-cast
+                -Wno-unused-macros
+                -Wno-zero-as-null-pointer-constant
+                )
+
+        target_link_libraries(
+                third-party
+                INTERFACE
+                imgui
+                )
+endif ()
+
+# ImTUI
+if (CURSES)
+        file(GLOB IMTUI_HEADERS ${THIRD_PARTY_SOURCE_DIR}/imtui/*.h)
+        file(GLOB IMTUI_SOURCES ${THIRD_PARTY_SOURCE_DIR}/imtui/*.cpp)
+
+        add_library(
+                imtui
+                STATIC
+                ${IMTUI_HEADERS}
+                ${IMTUI_SOURCES}
+                )
+
+        target_include_directories(
+                imtui
+                SYSTEM
+                PUBLIC
+                ${THIRD_PARTY_SOURCE_DIR}
+                )
+
+        target_compile_options(
+                imtui
+                PRIVATE
+                -Wno-missing-declarations
+                -Wno-old-style-cast
+                -Wno-unused-macros
+                -Wno-unused-variable
+                -Wno-zero-as-null-pointer-constant
+                )
+
+        target_link_libraries(
+                third-party
+                INTERFACE
+                imtui
+                )
+endif ()
