@@ -158,6 +158,8 @@ CHKJSON_BIN = $(BUILD_PREFIX)chkjson
 BINDIST_DIR = $(BUILD_PREFIX)bindist
 BUILD_DIR = $(CURDIR)
 SRC_DIR = src
+IMGUI_DIR = $(SRC_DIR)/third-party/imgui
+IMTUI_DIR = $(SRC_DIR)/third-party/imtui
 LOCALIZE = 1
 ASTYLE_BINARY = astyle
 
@@ -885,6 +887,17 @@ ASTYLE_SOURCES := $(sort \
 # Third party sources should not be astyle'd
 SOURCES += $(THIRD_PARTY_SOURCES)
 
+IMGUI_SOURCES = $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
+
+ifeq ($(SDL), 1)
+	IMGUI_SOURCES += $(IMGUI_DIR)/imgui_impl_sdl2.cpp $(IMGUI_DIR)/imgui_impl_sdlrenderer2.cpp
+else 
+	IMGUI_SOURCES += $(IMTUI_DIR)/imtui-impl-ncurses.cpp $(IMTUI_DIR)/imtui-impl-text.cpp
+  OTHERS += -DIMTUI
+endif
+
+SOURCES += $(IMGUI_SOURCES)
+
 _OBJS = $(SOURCES:$(SRC_DIR)/%.cpp=%.o)
 ifeq ($(TARGETSYSTEM),WINDOWS)
   RSRC = $(wildcard $(SRC_DIR)/*.rc)
@@ -1002,6 +1015,12 @@ $(ODIR)/%.o: $(SRC_DIR)/%.cpp $(PCH_P)
 
 $(ODIR)/%.o: $(SRC_DIR)/%.rc
 	$(RC) $(RFLAGS) $< -o $@
+
+$(ODIR)/third-party/imgui/%.o: $(IMGUI_DIR)/%.cpp
+	$(CXX) $(CPPFLAGS) $(DEFINES) $(DEBUG) $(DEBUGSYMS) $(PROFILE) $(OTHERS) -MMD -MP -c $< -o $@
+
+$(ODIR)/third-party/imtui/%.o: $(IMTUI_DIR)/%.cpp
+	$(CXX) $(CPPFLAGS) $(DEFINES) $(DEBUG) $(DEBUGSYMS) $(PROFILE) $(OTHERS) -MMD -MP -c $< -o $@
 
 $(ODIR)/resource.o: data/cataicon.ico data/application_manifest.xml
 
