@@ -289,7 +289,7 @@ bool is_in_bounds( int x, int y )
 {
     ImGuiContext *ctxt = ImGui::GetCurrentContext();
     // skip the first window, since ImGui seems to always have a "dummy" window that takes up most of the screen
-    for( size_t index = 1; index < ctxt->Windows.size(); index++ ) {
+    for( int index = 1; index < ctxt->Windows.size(); index++ ) {
         ImGuiWindow *win = ctxt->Windows[index];
         if(win->Collapsed || !win->Active) {
             continue;
@@ -353,7 +353,8 @@ void ImTui_ImplNcurses_DrawScreen( bool active )
         }
         bool wmove_needed = true;
 
-        int lastp = 0xFFFFFFFF;
+        constexpr int no_lastp = 0x7FFFFFFF;
+        int lastp = no_lastp;
         for( int x = 0; x < nx; ++x ) {
             if( !is_in_bounds( x, y ) ) {
                 wmove_needed = true;
@@ -381,7 +382,7 @@ void ImTui_ImplNcurses_DrawScreen( bool active )
             const uint16_t c = cell & 0x0000FFFF;
             waddch( imtui_win, c );
         }
-        if( lastp != 0xFFFFFFFF ) {
+        if( lastp != no_lastp ) {
             wattroff( imtui_win, COLOR_PAIR( colPairs[lastp].second ) );
         }
 

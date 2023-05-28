@@ -849,7 +849,7 @@ void inventory_column::calculate_cell_width( size_t index )
             cells[index].current_width = text_stripped.length();
         }
     }
-#if (defined(WIN32) || defined(TILES))
+#if defined( TILES )
     cells[index].current_width = ( cells[index].current_width + 1 ) * fontwidth;
 #endif
 }
