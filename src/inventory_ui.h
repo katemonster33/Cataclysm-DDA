@@ -137,7 +137,7 @@ class inventory_entry
             locations( locations ),
             chevron( chevron ),
             enabled( enabled ),
-            is_selected( false ){
+            is_selected( false ) {
         }
 
         bool operator==( const inventory_entry &other ) const;
@@ -356,7 +356,7 @@ class inventory_column
         friend class inventory_selector;
     public:
         explicit inventory_column( class inventory_selector *parent,
-                          const inventory_selector_preset &preset = default_preset );
+                                   const inventory_selector_preset &preset = default_preset );
 
         virtual ~inventory_column() = default;
 
@@ -686,7 +686,7 @@ class inventory_selector : public cataimgui::window
                             item_location const &topmost_parent = {}, int indent = 0 );
 
 
-        virtual void draw_controls() override;
+        void draw_controls() override;
         cataimgui::bounds get_bounds() override;
         inventory_entry &draw_column( inventory_column *column );
 
@@ -837,7 +837,6 @@ class inventory_selector : public cataimgui::window
         inventory_column own_gear_column;    // Column for own gear (weapon, armor) items
         inventory_column map_column;         // Column for map and vehicle items
 
-        const int border = 1;                // Width of the window border
         std::string filter;
 
         bool is_empty = true;

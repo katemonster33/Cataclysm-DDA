@@ -905,7 +905,7 @@ std::string input_context::get_conflicts(
     const input_event &event, const std::string &ignore_action ) const
 {
     return enumerate_as_string( registered_actions.begin(), registered_actions.end(),
-    [ this, &event, &ignore_action ]( const std::string & action ) {
+    [ this, &event, &ignore_action ]( const std::string &action ) {
         return action != ignore_action && action_uses_input( action, event )
                ? get_action_name( action ) : std::string();
     } );
@@ -1184,10 +1184,10 @@ std::string input_context::describe_key_and_name( const std::string &action_desc
 }
 
 // In ImGui, there are lots of cases where we need to execute code related to an action while drawing.
-//  We can't always do this cleanly during drawing, so we set action_override here so that the next
-//  time input_context::handle_input gets no input, it instead returns action_override.
-std::string action_override;
-std::string action_override_old;
+        //  We can't always do this cleanly during drawing, so we set action_override here so that the next
+        //  time input_context::handle_input gets no input, it instead returns action_override.
+static std::string action_override;
+static std::string action_override_old;
 
 void input_context::set_action_override( const std::string &action )
 {
@@ -1459,7 +1459,7 @@ action_id input_context::display_menu( const bool permit_execute_action )
     std::vector<std::string> org_registered_actions( registered_actions );
     org_registered_actions.erase( std::remove_if( org_registered_actions.begin(),
                                   org_registered_actions.end(),
-    []( const std::string & a ) {
+    []( const std::string &a ) {
         return a == ANY_INPUT || a == COORDINATE;
     } ), org_registered_actions.end() );
 
