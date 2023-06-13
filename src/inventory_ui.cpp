@@ -63,10 +63,10 @@
 #include "cata_imgui.h"
 
 
-inventory_entry *mouse_hovered_entry = nullptr;
+static inventory_entry *mouse_hovered_entry = nullptr;
 
-inventory_entry *keyboard_focused_entry = nullptr;
-const item_location *entry_to_be_focused = nullptr;
+static inventory_entry *keyboard_focused_entry = nullptr;
+static const item_location *entry_to_be_focused = nullptr;
 
 static const item_category_id item_category_BIONIC_FUEL_SOURCE( "BIONIC_FUEL_SOURCE" );
 static const item_category_id item_category_INTEGRATED( "INTEGRATED" );
@@ -866,7 +866,7 @@ void inventory_column::highlight( size_t new_index, scroll_direction dir )
 void inventory_column::calculate_cell_width( size_t index )
 {
     cells[index].current_width = 0;
-    for( auto entry : entries ) {
+    for( const inventory_entry &entry : entries ) {
         inventory_entry::entry_cell_cache_t cache = entry.get_entry_cell_cache( parent_selector->preset );
         std::string text_stripped = remove_color_tags( cache.text[index] );
         if( text_stripped.length() > cells[index].current_width ) {
@@ -1339,7 +1339,7 @@ void inventory_column::prepare_paging( const std::string &filter )
     }
 
     const auto filter_fn = filter_from_string<inventory_entry>(
-    filter, [this]( const std::string & filter ) {
+    filter, [this]( const std::string &filter ) {
         return preset.get_filter( filter );
     } );
 
@@ -1480,7 +1480,6 @@ class pocket_selector : public cataimgui::list_selector
 {
         item *drag_drop_source;
         std::vector<item_pocket *> drag_drop_pockets;
-        cataimgui::message_box *msg_box;
         int base_move_cost;
     public:
         pocket_selector( int base_move_cost, item *source,
@@ -1496,7 +1495,7 @@ class pocket_selector : public cataimgui::list_selector
             }
         }
 
-        int get_base_move_cost() {
+        const int get_base_move_cost() {
             return base_move_cost;
         }
 
@@ -1558,7 +1557,7 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column )
         }
         float text_width = ImGui::GetContentRegionAvail().x;
         if( !cache.text.empty() ) {
-            auto orig_cpos = ImGui::GetCursorPos();
+            ImVec2 orig_cpos = ImGui::GetCursorPos();
             float current_xpos = ImGui::GetContentRegionAvail().x + orig_cpos.x;
             for( size_t index = cache.text.size() - 1; index >= 1; index-- ) {
                 if( column->cells[index].current_width == 0 ) {
@@ -1806,7 +1805,9 @@ bool inventory_selector::drag_drop_item( item *sourceItem, item *destItem )
             item_pocket *pkt = pocket_picker->get_selected_pocket();
             auto contains = pkt->can_contain( *pocket_picker->get_item() );
             if( contains.success() ) {
-                u.store( pkt, *pocket_picker->get_item(), true, pocket_picker->get_base_move_cost() );
+                item *picked_item = pocket_picker->get_item();
+                int base_move_cost = pocket_picker->get_base_move_cost();
+                u.store( pkt, *picked_item, true, base_move_cost );
 
                 clear_items();
                 add_character_items( u );
@@ -2123,7 +2124,7 @@ void inventory_selector::rearrange_columns( size_t client_width )
     const item_location prev_selection = prev_entry.is_item() ?
                                          prev_entry.any_item() : item_location::nowhere;
     size_t max_width = 0;
-    for( auto column : get_visible_columns() ) {
+    for( inventory_column *column : get_visible_columns() ) {
         for( size_t index = 0; index < column->cells.size(); index++ ) {
             column->calculate_cell_width( index );
         }
@@ -2624,7 +2625,7 @@ void inventory_selector::on_input( const inventory_input &input )
                 cataimgui::string_input_box( "Set Filter",
                                              "Enter new inventory filter:" ) );
         if( show_popup( input_box ) == cataimgui::dialog_result::OKClicked ) {
-            set_filter( input_box.get()->get_input() );
+            set_filter( input_box->get_input() );
         }
     } else if( input.action == "RESET_FILTER" ) {
         set_filter( "" );
@@ -3121,7 +3122,8 @@ void inventory_multiselector::toggle_entries( int &count, const toggle_mode mode
                        !entry.any_item()->is_favorite &&
                        !u.is_worn( *entry.any_item() );
             };
-            auto entries_tmp = columns[active_column_index]->get_entries( filter_to_nonfavorite_and_nonworn );
+            std::vector<inventory_entry *> entries_tmp = columns[active_column_index]->get_entries(
+                        filter_to_nonfavorite_and_nonworn );
             if( !entries_tmp.empty() ) {
                 selected = entries_tmp[0];
             }
@@ -3997,7 +3999,7 @@ void inventory_selector::draw_controls()
         prepare_layout();
     }
     int num_columns = 0;
-    for( auto col : columns ) {
+    for( const inventory_column *col : columns ) {
         if( col->visible() ) {
             num_columns++;
         }
@@ -4015,7 +4017,7 @@ void inventory_selector::draw_controls()
                                ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_Borders, { 0.0f, table_height } ) ) {
             ImGui::TableNextColumn();
             int drawn_columns = 0;
-            for( auto column : columns ) {
+            for( inventory_column *column : columns ) {
                 if( column->visible() ) {
                     if( ImGui::BeginChild( string_format( "COLUMN_%d", drawn_columns ).c_str() ) ) {
                         draw_column( column );

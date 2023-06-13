@@ -349,6 +349,7 @@ class nc_color
     private:
         // color is actually an ncurses attribute.
         int attribute_value;
+        int index; // NOLINT(cata-serialize)
 
         explicit nc_color( const int a ) : attribute_value( a ) { }
 

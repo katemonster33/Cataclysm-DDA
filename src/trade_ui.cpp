@@ -23,10 +23,6 @@
 #include "imgui/imgui.h"
 #include "cata_imgui.h"
 
-extern inventory_entry *mouse_hovered_entry;
-extern inventory_entry *keyboard_focused_entry;
-extern const item_location *entry_to_be_focused;
-
 static const flag_id json_flag_NO_UNWIELD( "NO_UNWIELD" );
 static const item_category_id item_category_ITEMS_WORN( "ITEMS_WORN" );
 static const item_category_id item_category_WEAPON_HELD( "WEAPON_HELD" );
@@ -111,6 +107,8 @@ trade_ui::trade_ui( party_t &you, npc &trader, currency_t cost, std::string titl
       _parties{ &trader, &you }, _title( std::move( title ) )
 
 {
+    window_size.x = 0;
+    window_size.y = 0;
     _panes[_you]->add_character_items( you );
     _panes[_you]->add_nearby_items( 1 );
     _panes[_trader]->add_character_items( trader );
@@ -303,7 +301,6 @@ cataimgui::bounds trade_ui::get_bounds()
     return { 0, 0, get_window_width() * 0.7f, float( get_window_height() ) };
 }
 
-ImVec2 window_size{ 0.0f, 0.0f };
 
 void trade_ui::draw_controls()
 {
@@ -330,7 +327,8 @@ void trade_ui::draw_controls()
     ImVec2 size_temp = ImGui::GetWindowSize();
     if( size_temp.x != window_size.x || size_temp.y != window_size.y ) {
         resize();
-        window_size = size_temp;
+        window_size.x = int( size_temp.x );
+        window_size.y = int( size_temp.y );
     }
     //_panes[0]->draw();
     //ImGui::SameLine( 0, 0 );
