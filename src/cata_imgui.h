@@ -3,6 +3,7 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include <array>
 
 class nc_color;
 struct item_info_data;
@@ -52,7 +53,7 @@ class window
         explicit window( int window_flags = 0 );
         explicit window( window *parent, int window_flags = 0 );
     public:
-        explicit window( std::string title, int window_flags = 0 );
+        explicit window( const std::string &title, int window_flags = 0 );
         virtual ~window();
         void draw_colored_text( std::string const &text, const nc_color &color,
                                 text_align alignment = text_align::Left, float max_width = 0.0F, bool *is_selected = nullptr );
@@ -60,7 +61,7 @@ class window
                                 text_align alignment = text_align::Left, float max_width = 0.0F, bool *is_selected = nullptr );
         bool action_button( const std::string &action, const std::string &text );
         void draw_header( std::string const &text );
-        bool get_is_open();
+        const bool get_is_open();
         void set_title( const std::string &title );
         bool is_child_window_navigated();
         void show_popup_async( popup *next_popup );
@@ -94,8 +95,8 @@ class popup : public window
         bool is_modal;
         std::function<bool()> on_draw_callback;
     public:
-        popup( std::string id, bool is_modal );
-        popup( std::string id, bool is_modal, std::function<bool()> on_draw_callback );
+        popup( const std::string &id, bool is_modal );
+        popup( const std::string &id, bool is_modal, const std::function<bool()> &on_draw_callback );
         ~popup() override;
 
         void draw() override;
@@ -126,7 +127,7 @@ class string_input_box : public popup
         std::array<char, 100> input;
     public:
         string_input_box( const std::string &title, const std::string &prompt );
-        static dialog_result show( std::string prompt, std::string &input );
+        static dialog_result show( const std::string &prompt, std::string &input );
         std::string get_input();
     protected:
         void draw_controls() override;
@@ -144,9 +145,9 @@ class list_selector : public popup
         };
 
         explicit list_selector( std::string id );
-        void add( litem it );
+        void add( const litem &it );
         void add( std::initializer_list<litem> &items );
-        int get_selected_index();
+        const int get_selected_index();
     protected:
         void draw_controls() override;
         std::vector<litem> items;

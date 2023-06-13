@@ -72,11 +72,11 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
     if( alignment != text_align::Left ) {
         std::string str_raw = remove_color_tags( text );
         int fullWidth = ImGui::GetContentRegionAvail().x;
-        auto textWidth = ImGui::CalcTextSize( str_raw.c_str() ).x;
+        float textWidth = ImGui::CalcTextSize( str_raw.c_str() ).x;
         if( alignment == text_align::Right ) {
             ImGui::SetCursorPosX( ImGui::GetCursorPosX() + fullWidth - textWidth - 2 );
         } else if( alignment == text_align::Center ) {
-            ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ( fullWidth / 2 ) - ( textWidth / 2 ) );
+            ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ( float( fullWidth ) / 2 ) - ( textWidth / 2 ) );
         }
     }
     if( is_selected ) {
@@ -200,7 +200,7 @@ int cataimgui::window::draw_item_info_data( item_info_data &data )
     return ctxt.get_raw_input().get_first_input();
 }
 
-bool cataimgui::window::get_is_open()
+const bool cataimgui::window::get_is_open()
 {
     return is_open;
 }
@@ -230,7 +230,7 @@ class cataimgui::window_impl : public ui_adaptor
         cataimgui::window *win_base;
         bool is_resized;
     public:
-        window_impl( cataimgui::window *win ) : ui_adaptor() {
+        explicit window_impl( cataimgui::window *win ) {
             win_base = win;
             is_resized = true;
         }
@@ -261,7 +261,7 @@ cataimgui::window::window( cataimgui::window *parent, int window_flags ) : windo
     is_open = true;
 }
 
-cataimgui::window::window( std::string title, int window_flags ) : window( window_flags )
+cataimgui::window::window( const std::string &title, int window_flags ) : window( window_flags )
 {
     p_impl = new cataimgui::window_impl( this );
     p_impl->is_imgui = true;
@@ -274,9 +274,7 @@ cataimgui::window::~window()
     for( cataimgui::window *child : children ) {
         child->is_open = false;
     }
-    if( p_impl ) {
-        delete p_impl;
-    }
+    delete p_impl;
 }
 
 bool cataimgui::window::is_resized()
@@ -317,10 +315,10 @@ void cataimgui::window::draw()
             draw_controls();
             if( active_popup ) {
                 if( open_popup_requested ) {
-                    active_popup.get()->open();
+                    active_popup->open();
                 }
-                if( active_popup.get()->is_open ) {
-                    active_popup.get()->draw();
+                if( active_popup->is_open ) {
+                    active_popup->draw();
                 } else {
                     active_popup.reset();
                 }
@@ -407,8 +405,8 @@ bool cataimgui::is_drag_drop_active()
     return ImGui::GetCurrentContext()->DragDropActive;
 }
 
-ImGuiID popup_id = 0;
-cataimgui::popup::popup( std::string id, bool is_modal ) : cataimgui::window( )
+static ImGuiID popup_id = 0;
+cataimgui::popup::popup( const std::string &id, bool is_modal )
 {
     this->id = id;
     result = cataimgui::dialog_result::None;
@@ -418,8 +416,8 @@ cataimgui::popup::popup( std::string id, bool is_modal ) : cataimgui::window( )
     }
 }
 
-cataimgui::popup::popup( std::string id, bool is_modal,
-                         std::function<bool()> on_draw_callback ) : popup( id, is_modal )
+cataimgui::popup::popup( const std::string &id, bool is_modal,
+                         const std::function<bool()> &on_draw_callback ) : popup( id, is_modal )
 {
     this->on_draw_callback = on_draw_callback;
 }
@@ -549,7 +547,8 @@ cataimgui::string_input_box::string_input_box( const std::string &title,
     this->prompt = prompt;
 }
 
-cataimgui::dialog_result cataimgui::string_input_box::show( std::string prompt, std::string &input )
+cataimgui::dialog_result cataimgui::string_input_box::show( const std::string &prompt,
+        std::string &input )
 {
     input_context ctx( "INPUT_BOX" );
     ctx.register_action( "ANY_INPUT" );
@@ -590,7 +589,7 @@ cataimgui::list_selector::list_selector( std::string id ) : cataimgui::popup( id
 {
 }
 
-void cataimgui::list_selector::add( cataimgui::list_selector::litem it )
+void cataimgui::list_selector::add( const cataimgui::list_selector::litem &it )
 {
     items.push_back( it );
 }
@@ -600,7 +599,7 @@ void cataimgui::list_selector::add( std::initializer_list<cataimgui::list_select
     this->items.insert( this->items.end(), items.begin(), items.end() );
 }
 
-int cataimgui::list_selector::get_selected_index()
+const int cataimgui::list_selector::get_selected_index()
 {
     return selected_index;
 }
