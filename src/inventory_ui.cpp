@@ -61,16 +61,14 @@
 #include <vector>
 #include "cata_imgui.h"
 
-
-static inventory_entry *mouse_hovered_entry = nullptr;
-
-static inventory_entry *keyboard_focused_entry = nullptr;
-static const item_location *entry_to_be_focused = nullptr;
-
 static const item_category_id item_category_BIONIC_FUEL_SOURCE( "BIONIC_FUEL_SOURCE" );
 static const item_category_id item_category_INTEGRATED( "INTEGRATED" );
 static const item_category_id item_category_ITEMS_WORN( "ITEMS_WORN" );
 static const item_category_id item_category_WEAPON_HELD( "WEAPON_HELD" );
+
+inventory_entry *inventory_selector::mouse_hovered_entry = nullptr;
+inventory_entry *inventory_selector::keyboard_focused_entry = nullptr;
+const item_location *inventory_selector::entry_to_be_focused = nullptr;
 
 namespace
 {
@@ -1381,7 +1379,7 @@ bool inventory_column::highlight( const item_location &loc, bool front_only )
             ( ( !front_only && std::find( ent.locations.begin(), ent.locations.end(), loc ) !=
                 ent.locations.end() ) ||
               ( !ent.is_collation_header() && ent.locations.front() == loc ) ) ) {
-            entry_to_be_focused = &ent.any_item();
+            inventory_selector::entry_to_be_focused = &ent.any_item();
             return true;
         }
     }
@@ -2416,6 +2414,7 @@ inventory_selector::inventory_selector( cataimgui::window *parent, Character &u,
     }
     mouse_hovered_entry = nullptr;
     keyboard_focused_entry = nullptr;
+    entry_to_be_focused = nullptr;
 }
 
 inventory_selector::inventory_selector( Character &u, const inventory_selector_preset &preset )
@@ -2464,6 +2463,7 @@ inventory_selector::inventory_selector( Character &u, const inventory_selector_p
     }
     mouse_hovered_entry = nullptr;
     keyboard_focused_entry = nullptr;
+    entry_to_be_focused = nullptr;
 }
 
 inventory_selector::~inventory_selector()

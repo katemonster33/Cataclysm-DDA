@@ -26,11 +26,6 @@ namespace cataimgui
 struct bounds;
 } // namespace cataimgui
 
-
-extern inventory_entry *mouse_hovered_entry;
-extern inventory_entry *keyboard_focused_entry;
-extern const item_location *entry_to_be_focused;
-
 class trade_selector : public inventory_drop_selector
 {
     public:

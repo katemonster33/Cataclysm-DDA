@@ -173,20 +173,20 @@ trade_ui::trade_result_t trade_ui::perform_trade()
             _queue.pop();
             _process( ev );
         }
-        if( last_focused_entry != mouse_hovered_entry ) {
-            if( mouse_hovered_entry ) {
+        if( last_focused_entry != inventory_selector::mouse_hovered_entry ) {
+            if( inventory_selector::mouse_hovered_entry ) {
                 int new_cpane = 0;
                 for( new_cpane = 0; new_cpane < 2; new_cpane++ ) {
                     for( inventory_entry *ent : _panes[new_cpane]->get_items() ) {
                         // selected entry belongs to this pane? break - we've figured out the selected pane
-                        if( ent == mouse_hovered_entry ) {
+                        if( ent == inventory_selector::mouse_hovered_entry ) {
                             _cpane = new_cpane;
                             break;
                         }
                     }
                 }
             }
-            last_focused_entry = mouse_hovered_entry;
+            last_focused_entry = inventory_selector::mouse_hovered_entry;
         }
     }
 
@@ -257,7 +257,7 @@ void trade_ui::_process( event const &ev )
             _cpane = -_cpane + 1;
             std::vector<inventory_entry *> items = _panes[_cpane]->get_items();
             if( !items.empty() ) {
-                entry_to_be_focused = &items[0]->any_item();
+                inventory_selector::entry_to_be_focused = &items[0]->any_item();
             }
             break;
         }
