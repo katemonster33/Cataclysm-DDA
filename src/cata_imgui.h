@@ -61,7 +61,7 @@ class window
                                 text_align alignment = text_align::Left, float max_width = 0.0F, bool *is_selected = nullptr );
         bool action_button( const std::string &action, const std::string &text );
         void draw_header( std::string const &text );
-        const bool get_is_open();
+        bool get_is_open() const;
         void set_title( const std::string &title );
         bool is_child_window_navigated();
         void show_popup_async( popup *next_popup );
@@ -147,7 +147,7 @@ class list_selector : public popup
         explicit list_selector( std::string id );
         void add( const litem &it );
         void add( std::initializer_list<litem> &items );
-        const int get_selected_index();
+        int get_selected_index() const;
     protected:
         void draw_controls() override;
         std::vector<litem> items;

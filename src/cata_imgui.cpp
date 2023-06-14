@@ -200,7 +200,7 @@ int cataimgui::window::draw_item_info_data( item_info_data &data )
     return ctxt.get_raw_input().get_first_input();
 }
 
-const bool cataimgui::window::get_is_open()
+bool cataimgui::window::get_is_open() const
 {
     return is_open;
 }
@@ -599,7 +599,7 @@ void cataimgui::list_selector::add( std::initializer_list<cataimgui::list_select
     this->items.insert( this->items.end(), items.begin(), items.end() );
 }
 
-const int cataimgui::list_selector::get_selected_index()
+int cataimgui::list_selector::get_selected_index() const
 {
     return selected_index;
 }
