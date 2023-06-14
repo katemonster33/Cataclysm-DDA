@@ -1311,7 +1311,7 @@ void inventory_column::prepare_paging( const std::string &filter )
     }
 
     const auto filter_fn = filter_from_string<inventory_entry>(
-    filter, [this]( const std::string &filter ) {
+    filter, [this]( const std::string & filter ) {
         return preset.get_filter( filter );
     } );
 
@@ -1467,7 +1467,7 @@ class pocket_selector : public cataimgui::list_selector
             }
         }
 
-        const int get_base_move_cost() {
+        int get_base_move_cost() const {
             return base_move_cost;
         }
 
