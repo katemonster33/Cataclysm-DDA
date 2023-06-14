@@ -1184,8 +1184,8 @@ std::string input_context::describe_key_and_name( const std::string &action_desc
 }
 
 // In ImGui, there are lots of cases where we need to execute code related to an action while drawing.
-        //  We can't always do this cleanly during drawing, so we set action_override here so that the next
-        //  time input_context::handle_input gets no input, it instead returns action_override.
+//  We can't always do this cleanly during drawing, so we set action_override here so that the next
+//  time input_context::handle_input gets no input, it instead returns action_override.
 static std::string action_override;
 static std::string action_override_old;
 
