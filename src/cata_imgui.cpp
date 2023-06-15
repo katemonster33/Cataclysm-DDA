@@ -365,7 +365,11 @@ cataimgui::dialog_result cataimgui::window::show_popup( const std::shared_ptr<po
     do {
         // force a redraw
         tmp_context.handle_input();
-    } while( this->active_popup != nullptr );
+    } while( this->active_popup && this->active_popup->get_result() == cataimgui::dialog_result::None );
+    if( this->active_popup ) {
+        last_popup_result = this->active_popup->get_result();
+        this->active_popup.reset();
+    }
     return last_popup_result;
 }
 
