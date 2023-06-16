@@ -279,12 +279,9 @@ cataimgui::window::~window()
 
 bool cataimgui::window::is_resized()
 {
-    if(parent)
-    {
+    if( parent ) {
         return parent->is_resized();
-    }
-    else
-    {
+    } else {
         return p_impl->is_resized;
     }
 }
@@ -553,7 +550,7 @@ void cataimgui::message_box::draw_controls()
 cataimgui::string_input_box::string_input_box( const std::string &title,
         const std::string &prompt ) : popup( title, true )
 {
-    input[0] = 0; // terminate our input buffer
+    input.fill( 0 ); // terminate our input buffer
     this->id = title;
     this->prompt = prompt;
 }
@@ -585,7 +582,7 @@ void cataimgui::string_input_box::draw_controls()
     if( !ImGui::IsAnyItemActive() ) {
         ImGui::SetKeyboardFocusHere( 0 );
     }
-    ImGui::InputText( "##inputtext", input.data(), std::extent< decltype( input ) >::value );
+    ImGui::InputText( "##inputtext", input.data(), input.max_size() );
     if( ImGui::Button( "OK" ) || ImGui::IsKeyDown( ImGuiKey_Enter ) ) {
         result = dialog_result::OKClicked;
     }
