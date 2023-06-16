@@ -3996,15 +3996,13 @@ void inventory_selector::draw_controls()
         action_button( "VIEW_CATEGORY_MODE", "Change View Mode" );
     }
     bool any_paging_invalid = false;
-    for(const inventory_column *col : columns)
-    {
-        if(col->visible() && !col->paging_is_valid)
-        {
+    for( const inventory_column *col : columns ) {
+        if( col->visible() && !col->paging_is_valid ) {
             any_paging_invalid = true;
             break;
         }
     }
-    if( is_resized() || any_paging_invalid) {
+    if( is_resized() || any_paging_invalid ) {
         prepare_layout();
     }
     int num_columns = 0;
