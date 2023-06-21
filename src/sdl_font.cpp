@@ -206,7 +206,7 @@ CachedTTFFont::CachedTTFFont(
     };
 
     ImGuiIO &io = ImGui::GetIO();
-    static const ImWchar ranges[] = {
+    static const std::array<ImWchar, 17> ranges = {
         0x0020, 0x052F,
         0x1D00, 0x1DFF,
         0x2000, 0x206F,
@@ -218,7 +218,7 @@ CachedTTFFont::CachedTTFFont(
         //0x0020, 0xCFFF,
         0
     };
-    imgui_font = io.Fonts->AddFontFromFileTTF( typeface.c_str(), fontsize, nullptr, ranges );
+    imgui_font = io.Fonts->AddFontFromFileTTF( typeface.c_str(), fontsize, nullptr, ranges.data() );
     if( imgui_font && !io.FontDefault && typeface.find( "unifont", 0 ) != std::string::npos ) {
         io.FontDefault = imgui_font;
     }
