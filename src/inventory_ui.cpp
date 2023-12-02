@@ -586,13 +586,6 @@ const item_category *inventory_entry::get_category_ptr() const
     return &any_item()->get_category_of_contents();
 }
 
-inventory_column::inventory_column( const inventory_selector_preset &preset ) :
-    preset( preset )
-{
-    hide_entries_override = uistate.hide_entries_override;
-    cells.resize( preset.get_cells_count() );
-}
-
 bool inventory_column::activatable() const
 {
     return std::any_of( entries.begin(), entries.end(), [this]( const inventory_entry & e ) {
@@ -806,13 +799,6 @@ bool inventory_holster_preset::is_shown( const item_location &contained ) const
         }
     }
 
-    if( contained->is_bucket_nonempty() ) {
-        return false;
-    }
-    if( !holster->all_pockets_rigid() &&
-        !holster.parents_can_contain_recursive( &item_copy ) ) {
-        return false;
-    }
     return true;
 }
 
@@ -2353,10 +2339,10 @@ std::vector<std::string> inventory_selector::get_stats() const
 std::pair< bool, std::string > inventory_selector::query_string( const std::string &val,
         bool end_with_toggle )
 {
-    spopup = std::make_unique<string_input_popup>();
-    spopup->max_length( 256 )
+    string_input_popup spopup;
+    spopup.max_length( 256 )
     .text( val );
-    spopup->identifier( "item_filter" ).hist_use_uilist( false );
+    spopup.identifier( "item_filter" ).hist_use_uilist( false );
     if( end_with_toggle ) {
         for( input_event const &iev : inp_mngr.get_input_for_action( "TOGGLE_ENTRY", "INVENTORY" ) ) {
             spopup.add_callback( iev.get_first_input(), [&spopup]() {
@@ -3980,7 +3966,6 @@ std::string unload_selector::hint_string()
 
 std::pair<item_location, bool> unload_selector::execute()
 {
-    shared_ptr_fast<ui_adaptor> ui = create_or_get_ui_adaptor();
     item_location startDragItem;
     bool dragActive = false;
     while( true ) {
@@ -4023,7 +4008,7 @@ std::pair<item_location, bool> unload_selector::execute()
         } else if( input.action == "QUIT" ) {
             return { item_location(), uistate.unload_auto_contain };
         } else if( input.action == "CONFIRM" ) {
-            const inventory_entry &highlighted = get_active_column().get_highlighted();
+            const inventory_entry &highlighted = columns[active_column_index]->get_highlighted();
             if( highlighted && highlighted.is_selectable() ) {
                 return { highlighted.any_item(), uistate.unload_auto_contain };
             }
@@ -4034,91 +4019,6 @@ std::pair<item_location, bool> unload_selector::execute()
             on_input( input );
         }
     }
-}
-
-trade_selector::trade_selector( trade_ui *parent, Character &u,
-                                inventory_selector_preset const &preset,
-                                std::string const &selection_column_title,
-                                point const &size, point const &origin )
-    : inventory_drop_selector( u, preset, selection_column_title ), _parent( parent ),
-      _ctxt_trade( "INVENTORY", keyboard_mode::keychar )
-{
-    _ctxt_trade.register_action( ACTION_SWITCH_PANES );
-    _ctxt_trade.register_action( ACTION_TRADE_CANCEL );
-    _ctxt_trade.register_action( ACTION_TRADE_OK );
-    _ctxt_trade.register_action( ACTION_AUTOBALANCE );
-    _ctxt_trade.register_action( "ANY_INPUT" );
-    // duplicate this action in the parent ctxt so it shows up in the keybindings menu
-    // CANCEL and OK are already set in inventory_selector
-    ctxt.register_action( ACTION_SWITCH_PANES );
-    ctxt.register_action( ACTION_AUTOBALANCE );
-    resize( size, origin );
-    _ui = create_or_get_ui_adaptor();
-    set_invlet_type( inventory_selector::SELECTOR_INVLET_ALPHA );
-}
-
-trade_selector::select_t trade_selector::to_trade() const
-{
-    return to_use;
-}
-
-void trade_selector::execute()
-{
-    debug_print_timer( tp_start );
-    bool exit = false;
-
-    get_active_column().on_activate();
-
-    while( !exit ) {
-        _ui->invalidate_ui();
-        ui_manager::redraw_invalidated();
-        std::string const &action = _ctxt_trade.handle_input();
-        if( action == ACTION_SWITCH_PANES ) {
-            _parent->pushevent( trade_ui::event::SWITCH );
-            get_active_column().on_deactivate();
-            exit = true;
-        } else if( action == ACTION_TRADE_OK ) {
-            _parent->pushevent( trade_ui::event::TRADEOK );
-            exit = true;
-        } else if( action == ACTION_TRADE_CANCEL ) {
-            _parent->pushevent( trade_ui::event::TRADECANCEL );
-            exit = true;
-        } else if( action == ACTION_AUTOBALANCE ) {
-            _parent->autobalance();
-        } else {
-            input_event const iev = _ctxt_trade.get_raw_input();
-            inventory_input const input =
-                process_input( ctxt.input_to_action( iev ), iev.get_first_input() );
-            inventory_drop_selector::on_input( input );
-            if( input.action == "HELP_KEYBINDINGS" ) {
-                ctxt.display_menu();
-            }
-        }
-    }
-}
-
-void trade_selector::on_toggle()
-{
-    _parent->recalc_values_cpane();
-}
-
-void trade_selector::resize( point const &size, point const &origin )
-{
-    _fixed_size = size;
-    _fixed_origin = origin;
-    if( _ui ) {
-        _ui->mark_resize();
-    }
-}
-
-shared_ptr_fast<ui_adaptor> trade_selector::get_ui() const
-{
-    return _ui;
-}
-
-input_context const *trade_selector::get_ctxt() const
-{
-    return &_ctxt_trade;
 }
 
 void inventory_selector::categorize_map_items( bool toggle )
