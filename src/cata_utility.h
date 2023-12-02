@@ -75,7 +75,7 @@ double round_up( double val, unsigned int dp );
 *
 * @p num must be non-negative, @p den must be positive, and @c num+den must not overflow.
 */
-template<typename T, typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
+template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
 T divide_round_up( T num, T den )
 {
     return ( num + den - 1 ) / den;
@@ -488,6 +488,8 @@ bool return_false( const T & )
 /**
  * Joins an iterable (class implementing begin() and end()) of elements into a single
  * string with specified delimiter by using `<<` ostream operator on each element
+ *
+ * keyword: implode
  */
 template<typename Container>
 std::string string_join( const Container &iterable, const std::string &joiner )
@@ -505,6 +507,8 @@ std::string string_join( const Container &iterable, const std::string &joiner )
 
 /**
 * Splits a string by delimiter into a vector of strings
+*
+* keyword: explode
 */
 std::vector<std::string> string_split( std::string_view string, char delim );
 
@@ -664,7 +668,7 @@ void set_title( const std::string &title );
 /**
  * Convenience function to get the aggregate value for a list of values.
  */
-template<typename T, typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
+template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
 T aggregate( const std::vector<T> &values, aggregate_type agg_func )
 {
     if( values.empty() ) {

@@ -167,12 +167,11 @@
               { "group": "guns_pistol_common", "prob": 100 },
               { "group": "guns_rifle_common_worn", "prob": 20, "contents-item": "shoulder_strap" },
               { "group": "guns_smg_common_worn", "prob": 5, "contents-item": "shoulder_strap" },
-              { "group": "guns_shotgun_common_worn", "prob": 40, "contents-item": "shoulder_strap" }
+              { "group": "guns_shotgun_common_worn", "prob": 40, "contents-item": "shoulder_strap_simple" }
             ],
             "prob": 24
           },
           { "group": "grenades", "prob": 10 },
-          { "group": "mil_hw", "prob": 1 },
           { "group": "launchers", "prob": 1 },
           { "group": "stash_food", "prob": 40 },
           { "group": "ammo_common", "prob": 26 },
@@ -427,7 +426,6 @@
       [ "motorbike_armor", 25 ],
       [ "ski_jacket", 10 ],
       [ "coat_winter", 10 ],
-      [ "coat_fur_sf", 1 ],
       [ "coat_fur", 1 ],
       [ "coat_faux_fur", 1 ]
     ]

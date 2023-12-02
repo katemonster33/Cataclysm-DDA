@@ -66,11 +66,15 @@ static const efftype_id effect_hunger_engorged( "hunger_engorged" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_onfire( "onfire" );
 static const efftype_id effect_pet( "pet" );
+static const efftype_id effect_psi_stunned( "psi_stunned" );
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_stunned( "stunned" );
 static const efftype_id effect_winded( "winded" );
 
 static const itype_id itype_swim_fins( "swim_fins" );
+
+static const mon_flag_str_id mon_flag_IMMOBILE( "IMMOBILE" );
+static const mon_flag_str_id mon_flag_RIDEABLE_MECH( "RIDEABLE_MECH" );
 
 static const move_mode_id move_mode_prone( "prone" );
 
@@ -85,7 +89,7 @@ static const trait_id trait_SHELL3( "SHELL3" );
 
 static bool check_water_affect_items( avatar &you )
 {
-    if( you.has_effect( effect_stunned ) ) {
+    if( you.has_effect( effect_stunned ) || you.has_effect( effect_psi_stunned ) ) {
         return true;
     }
 
@@ -174,7 +178,7 @@ bool avatar_action::move( avatar &you, map &m, const tripoint &d )
 
     const bool is_riding = you.is_mounted();
     tripoint dest_loc;
-    if( d.z == 0 && you.has_effect( effect_stunned ) ) {
+    if( d.z == 0 && ( you.has_effect( effect_stunned ) || you.has_effect( effect_psi_stunned ) ) ) {
         dest_loc.x = rng( you.posx() - 1, you.posx() + 1 );
         dest_loc.y = rng( you.posy() - 1, you.posy() + 1 );
         dest_loc.z = you.posz();
@@ -201,7 +205,7 @@ bool avatar_action::move( avatar &you, map &m, const tripoint &d )
     if( m.has_flag( ter_furn_flag::TFLAG_MINEABLE, dest_loc ) && g->mostseen == 0 &&
         get_option<bool>( "AUTO_FEATURES" ) && get_option<bool>( "AUTO_MINING" ) &&
         !m.veh_at( dest_loc ) && !you.is_underwater() && !you.has_effect( effect_stunned ) &&
-        !is_riding && !you.has_effect( effect_incorporeal ) ) {
+        !you.has_effect( effect_psi_stunned ) && !is_riding && !you.has_effect( effect_incorporeal ) ) {
         if( weapon && weapon->has_flag( flag_DIG_TOOL ) ) {
             if( weapon->type->can_use( "JACKHAMMER" ) &&
                 weapon->ammo_sufficient( &you ) ) {
@@ -368,7 +372,7 @@ bool avatar_action::move( avatar &you, map &m, const tripoint &d )
             }
             g->draw_hit_mon( dest_loc, critter, critter.is_dead() );
             return false;
-        } else if( critter.has_flag( MF_IMMOBILE ) || critter.has_effect( effect_harnessed ) ||
+        } else if( critter.has_flag( mon_flag_IMMOBILE ) || critter.has_effect( effect_harnessed ) ||
                    critter.has_effect( effect_ridden ) ) {
             add_msg( m_info, _( "You can't displace your %s." ), critter.name() );
             return false;
@@ -865,7 +869,8 @@ bool avatar_action::eat_here( avatar &you )
 {
     map &here = get_map();
     if( ( you.has_active_mutation( trait_RUMINANT ) || you.has_active_mutation( trait_GRAZER ) ) &&
-        ( here.ter( you.pos() ) == t_underbrush || here.ter( you.pos() ) == t_shrub ) ) {
+        ( here.has_flag( ter_furn_flag::TFLAG_SHRUB, you.pos() ) &&
+          !here.has_flag( ter_furn_flag::TFLAG_GRAZER_INEDIBLE, you.pos() ) ) ) {
         if( you.has_effect( effect_hunger_engorged ) ) {
             add_msg( _( "You're too full to eat the leaves from the %s." ), here.ter( you.pos() )->name() );
             return true;
@@ -876,26 +881,34 @@ bool avatar_action::eat_here( avatar &you )
             return true;
         }
     }
-    if( you.has_active_mutation( trait_GRAZER ) && ( here.ter( you.pos() ) == t_grass ||
-            here.ter( you.pos() ) == t_grass_long || here.ter( you.pos() ) == t_grass_tall ) ) {
+    if( ( you.has_active_mutation( trait_RUMINANT ) || you.has_active_mutation( trait_GRAZER ) ) &&
+        ( here.has_flag( ter_furn_flag::TFLAG_FLOWER, you.pos() ) &&
+          !here.has_flag( ter_furn_flag::TFLAG_GRAZER_INEDIBLE, you.pos() ) ) ) {
+        if( you.has_effect( effect_hunger_engorged ) ) {
+            add_msg( _( "You're too full to eat the %s." ), here.ter( you.pos() )->name() );
+            return true;
+        } else {
+            here.furn_set( you.pos(), f_null );
+            item food( "small_plant", calendar::turn, 1 );
+            you.assign_activity( consume_activity_actor( food ) );
+            return true;
+        }
+    }
+    if( you.has_active_mutation( trait_GRAZER ) &&
+        ( here.has_flag( ter_furn_flag::TFLAG_GRAZABLE, you.pos() ) &&
+          !here.has_flag( ter_furn_flag::TFLAG_FUNGUS, you.pos() ) ) ) {
         if( you.has_effect( effect_hunger_engorged ) ) {
             add_msg( _( "You're too full to graze." ) );
             return true;
         } else {
             item food( item( "grass", calendar::turn, 1 ) );
             you.assign_activity( consume_activity_actor( food ) );
-            if( here.ter( you.pos() ) == t_grass_tall ) {
-                here.ter_set( you.pos(), t_grass_long );
-            } else if( here.ter( you.pos() ) == t_grass_long ) {
-                here.ter_set( you.pos(), t_grass );
-            } else {
-                here.ter_set( you.pos(), t_dirt );
-            }
+            here.ter_set( you.pos(), here.get_ter_transforms_into( you.pos() ) );
             return true;
         }
     }
     if( you.has_active_mutation( trait_GRAZER ) ) {
-        if( here.ter( you.pos() ) == t_grass_golf ) {
+        if( here.ter( you.pos() ) == t_grass_golf || here.ter( you.pos() ) == t_grass ) {
             add_msg( _( "This grass is too short to graze." ) );
             return true;
         } else if( here.ter( you.pos() ) == t_grass_dead ) {
@@ -904,12 +917,15 @@ bool avatar_action::eat_here( avatar &you )
         } else if( here.ter( you.pos() ) == t_grass_white ) {
             add_msg( _( "This grass is tainted with paint and thus inedible." ) );
             return true;
+        } else if( here.ter( you.pos() ) == t_grass_alien ) {
+            add_msg( _( "This grass is razor sharp and would probably shred your mouth." ) );
+            return true;
         }
     }
     return false;
 }
 
-void avatar_action::eat( avatar &you, const item_location &loc )
+void avatar_action::eat( avatar &you, item_location &loc )
 {
     std::string filter;
     if( !you.activity.str_values.empty() ) {
@@ -919,7 +935,7 @@ void avatar_action::eat( avatar &you, const item_location &loc )
                         you.activity.id() );
 }
 
-void avatar_action::eat( avatar &you, const item_location &loc,
+void avatar_action::eat( avatar &you, item_location &loc,
                          const std::vector<int> &consume_menu_selections,
                          const std::vector<item_location> &consume_menu_selected_items,
                          const std::string &consume_menu_filter,
@@ -930,6 +946,7 @@ void avatar_action::eat( avatar &you, const item_location &loc,
         add_msg( _( "Never mind." ) );
         return;
     }
+    loc.overflow();
     you.assign_activity( consume_activity_actor( loc, consume_menu_selections,
                          consume_menu_selected_items, consume_menu_filter, type ) );
     you.last_item = item( *loc ).typeId();
@@ -958,7 +975,7 @@ void avatar_action::plthrow( avatar &you, item_location loc,
     }
     if( you.is_mounted() ) {
         monster *mons = get_player_character().mounted_creature.get();
-        if( mons->has_flag( MF_RIDEABLE_MECH ) ) {
+        if( mons->has_flag( mon_flag_RIDEABLE_MECH ) ) {
             if( !mons->check_mech_powered() ) {
                 add_msg( m_bad, _( "Your %s refuses to move as its batteries have been drained." ),
                          mons->get_name() );
@@ -1091,6 +1108,8 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
         }
     }
 
+    loc.overflow();
+
     if( loc->is_comestible() && loc->is_frozen_liquid() ) {
         add_msg( _( "Try as you might, you can't consume frozen liquids." ) );
         return;
@@ -1148,9 +1167,10 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
     if( use_in_place ) {
         update_lum( loc, false );
         you.use( loc, pre_obtain_moves, method );
-        update_lum( loc, true );
-
-        loc.make_active();
+        if( loc ) {
+            update_lum( loc, true );
+            loc.make_active();
+        }
     } else {
         you.use( loc, pre_obtain_moves, method );
 
@@ -1171,14 +1191,25 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
 // If it's a gun, some gunmods can also be loaded
 void avatar_action::unload( avatar &you )
 {
-    item_location loc = g->inv_map_splice( [&you]( const item & it ) {
-        return you.rate_action_unload( it ) == hint_rating::good;
-    }, _( "Unload item" ), 1, _( "You have nothing to unload." ) );
-
-    if( !loc ) {
+    std::pair<item_location, bool> ret = game_menus::inv::unload( you );
+    if( !ret.first ) {
         add_msg( _( "Never mind." ) );
         return;
     }
 
-    you.unload( loc );
+    if( ret.second || !ret.first->is_container() ) {
+        // Auto contain
+        you.unload( ret.first );
+    } else {
+        // Manual contain
+        item_location new_container = g->inv_map_splice( [&you]( const item_location & it ) {
+            return it->is_container() && !it->is_corpse() && you.rate_action_insert( it ) == hint_rating::good;
+        }, _( "Insert item" ), 1, _( "You have no container to insert items." ) );
+
+        if( !new_container ) {
+            add_msg( _( "Never mind." ) );
+            return;
+        }
+        you.unload( ret.first, false, new_container );
+    }
 }

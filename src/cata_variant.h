@@ -36,6 +36,7 @@ enum class debug_menu_index : int;
 enum class cata_variant_type : int {
     void_, // Special type for empty variants
     achievement_id,
+    activity_id,
     addiction_id,
     bionic_id,
     body_part,
@@ -108,7 +109,7 @@ constexpr cata_variant_type type_for_impl( std::index_sequence<I...> )
 {
     constexpr size_t num_types = static_cast<size_t>( cata_variant_type::num_types );
     constexpr std::array<bool, num_types> matches = {{
-            std::is_same<T, typename convert<static_cast<cata_variant_type>( I )>::type>::value...
+            std::is_same_v<T, typename convert<static_cast<cata_variant_type>( I )>::type>...
         }
     };
     for( size_t i = 0; i < num_types; ++i ) {
@@ -125,7 +126,7 @@ constexpr cata_variant_type type_for_impl( std::index_sequence<I...> )
 template<typename T>
 struct convert_string {
     using type = T;
-    static_assert( std::is_same<T, std::string>::value,
+    static_assert( std::is_same_v<T, std::string>,
                    "Intended for use only with string typedefs" );
     static std::string to_string( const T &v ) {
         return v;
@@ -187,7 +188,7 @@ struct convert_enum {
 };
 
 // These are the specializations of convert for each value type.
-static_assert( static_cast<int>( cata_variant_type::num_types ) == 47,
+static_assert( static_cast<int>( cata_variant_type::num_types ) == 48,
                "This assert is a reminder to add conversion support for any new types to the "
                "below specializations" );
 
@@ -201,6 +202,9 @@ struct convert<cata_variant_type::void_> {
 
 template<>
 struct convert<cata_variant_type::achievement_id> : convert_string_id<achievement_id> {};
+
+template<>
+struct convert<cata_variant_type::activity_id> : convert_string_id<activity_id> {};
 
 template<>
 struct convert<cata_variant_type::addiction_id> : convert_string_id<addiction_id> {};

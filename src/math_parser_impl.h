@@ -1,3 +1,4 @@
+#pragma once
 #ifndef CATA_SRC_MATH_PARSER_IMPL_H
 #define CATA_SRC_MATH_PARSER_IMPL_H
 
@@ -38,7 +39,9 @@ constexpr bool operator>( binary_op const &lhs, binary_op const &rhs )
            ( lhs.precedence == rhs.precedence && lhs.assoc == binary_op::associativity::left );
 }
 enum class paren {
-    left = 0,
+    left_sq = 0,
+    right_sq,
+    left,
     right,
 };
 
@@ -107,13 +110,7 @@ struct var {
     template<class... Args>
     explicit var( Args &&... args ) : varinfo( std::forward<Args>( args )... ) {}
 
-    double eval( dialogue &d ) const {
-        std::string const str = read_var_value( varinfo, d );
-        if( str.empty() ) {
-            return 0;
-        }
-        return std::stod( str );
-    }
+    double eval( dialogue &d ) const;
 
     var_info varinfo;
 };
@@ -122,6 +119,10 @@ struct kwarg {
     explicit kwarg( std::string_view key_, thingie val_ );
     std::string key;
     std::shared_ptr<thingie> val;
+};
+struct array {
+    explicit array( std::vector<thingie> &&params_ ): params( params_ ) {}
+    std::vector<thingie> params;
 };
 struct ternary {
     ternary() = default;
@@ -143,7 +144,7 @@ struct thingie {
     constexpr double eval( dialogue &d ) const;
 
     using impl_t =
-        std::variant<double, std::string, oper, func, func_jmath, func_diag_eval, func_diag_ass, var, kwarg, ternary>;
+        std::variant<double, std::string, oper, func, func_jmath, func_diag_eval, func_diag_ass, var, kwarg, ternary, array>;
     impl_t data;
 };
 
@@ -155,14 +156,19 @@ constexpr double thingie::eval( dialogue &d ) const
             return v;
         },
         // NOLINTNEXTLINE(cata-use-string_view)
-        []( const std::string & v )
+        []( std::string const & v )
         {
-            debugmsg( "Unexpected string operand %.*s", v.size(), v.data() );
+            debugmsg( "Unexpected string operand %s", v );
             return 0.0;
         },
         []( kwarg const & v )
         {
             debugmsg( "Unexpected kwarg %s", v.key );
+            return 0.0;
+        },
+        []( array const & /* v */ )
+        {
+            debugmsg( "Unexpected array" );
             return 0.0;
         },
         [&d]( auto const & v ) -> double
@@ -259,6 +265,11 @@ inline double neq( double l, double r )
     return static_cast<double>( l != r );
 }
 
+inline double b_neg( double /* zero */, double r )
+{
+    return static_cast<double>( float_equals( r, 0 ) );
+}
+
 } // namespace math_opers
 
 constexpr std::array<binary_op, 15> binary_ops{
@@ -278,9 +289,10 @@ constexpr std::array<binary_op, 15> binary_ops{
     binary_op{ "^", 4, binary_op::associativity::right, math_opers::math_pow },
 };
 
-constexpr std::array<unary_op, 2> prefix_unary_ops{
+constexpr std::array<unary_op, 3> prefix_unary_ops{
     unary_op{ "+", math_opers::pos },
     unary_op{ "-", math_opers::neg },
+    unary_op{ "!", math_opers::b_neg },
 };
 
 #endif // CATA_SRC_MATH_PARSER_IMPL_H

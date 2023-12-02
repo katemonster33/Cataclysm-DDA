@@ -9,6 +9,8 @@ namespace mattack
 {
 bool none( monster *z );
 bool absorb_items( monster *z );
+bool browse( monster *z );
+bool eat_carrion( monster *z );
 bool eat_crop( monster *z );
 bool eat_food( monster *z );
 bool shriek( monster *z );
@@ -96,9 +98,6 @@ bool bio_op_random_biojutsu( monster *z );
 bool bio_op_takedown( monster *z );
 bool bio_op_impale( monster *z );
 bool bio_op_disarm( monster *z );
-bool ranged_pull( monster *z );
-bool grab( monster *z );
-bool grab_drag( monster *z );
 bool suicide( monster *z );
 bool riotbot( monster *z );
 bool stretch_attack( monster *z );
@@ -110,6 +109,7 @@ bool doot( monster *z );
 bool zombie_fuse( monster *z );
 bool dsa_drone_scan( monster *z );
 bool blow_whistle( monster *z );
+bool graze( monster *z );
 
 void taze( monster *z, Creature *target );
 void rifle( monster *z, Creature *target );             // Automated M4

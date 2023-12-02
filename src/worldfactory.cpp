@@ -259,9 +259,6 @@ WORLD *worldfactory::make_new_world( special_game_type special_type )
         case special_game_type::TUTORIAL:
             worldname = "TUTORIAL";
             break;
-        case special_game_type::DEFENSE:
-            worldname = "DEFENSE";
-            break;
         default:
             return nullptr;
     }
@@ -297,6 +294,7 @@ void worldfactory::set_active_world( WORLD *world )
 bool WORLD::save( const bool is_conversion ) const
 {
     if( !assure_dir_exist( folder_path() ) ) {
+        debugmsg( "Unable to create or open world[%s] directory for saving", world_name );
         DebugLog( D_ERROR, DC_ALL ) << "Unable to create or open world[" << world_name <<
                                     "] directory for saving";
         return false;
@@ -997,8 +995,8 @@ int worldfactory::show_worldgen_tab_modselection( const catacurses::window &win,
         ctxt.register_action( "PREV_TAB" );
     }
     ctxt.register_action( "CONFIRM", to_translation( "Activate / deactivate mod" ) );
-    ctxt.register_action( "ADD_MOD" );
-    ctxt.register_action( "REMOVE_MOD" );
+    ctxt.register_action( "MOVE_MOD_UP" );
+    ctxt.register_action( "MOVE_MOD_DOWN" );
     ctxt.register_action( "SAVE_DEFAULT_MODS" );
     ctxt.register_action( "VIEW_MOD_DESCRIPTION" );
     ctxt.register_action( "FILTER" );
@@ -1368,7 +1366,6 @@ int worldfactory::show_worldgen_tab_modselection( const catacurses::window &win,
             }
         }
 
-
         if( navigate_ui_list( action, cursel[active_header], scroll_rate, recmax, true ) ) {
             recalc_start = true;
         } else if( action == "LEFT" || action == "RIGHT" ) {
@@ -1388,12 +1385,12 @@ int worldfactory::show_worldgen_tab_modselection( const catacurses::window &win,
                     active_header = 0;
                 }
             }
-        } else if( action == "ADD_MOD" ) {
+        } else if( action == "MOVE_MOD_DOWN" ) {
             if( active_header == 1 && active_mod_order.size() > 1 ) {
                 mman_ui->try_shift( '+', cursel[1], active_mod_order );
             }
             recalc_start = true;
-        } else if( action == "REMOVE_MOD" ) {
+        } else if( action == "MOVE_MOD_UP" ) {
             if( active_header == 1 && active_mod_order.size() > 1 ) {
                 mman_ui->try_shift( '-', cursel[1], active_mod_order );
             }

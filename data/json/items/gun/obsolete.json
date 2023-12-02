@@ -18,7 +18,7 @@
     "ammo": [ "223" ],
     "dispersion": 150,
     "durability": 7,
-    "flags": [ "OBSOLETE" ],
+    "flags": [ "OBSOLETE", "NO_TURRET" ],
     "min_cycle_recoil": 1350,
     "pocket_data": [
       {
@@ -71,8 +71,7 @@
         "id": "m27iar",
         "name": { "str": "M27 IAR" },
         "description": "A H&K416 carbine outfitted with a heavier barrel to enable higher amounts of suppressive fire while retaining a good degree of mobility.",
-        "ascii_picture": "m27_iar",
-        "weight": 1
+        "ascii_picture": "m27_iar"
       },
       {
         "id": "m38dmr",
@@ -90,7 +89,7 @@
     "durability": 8,
     "min_cycle_recoil": 1350,
     "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
-    "flags": [ "OBSOLETE" ],
+    "flags": [ "OBSOLETE", "NO_TURRET" ],
     "pocket_data": [
       {
         "pocket_type": "MAGAZINE_WELL",
@@ -137,8 +136,7 @@
         "id": "m4a1",
         "name": { "str": "M4A1" },
         "description": "A popular carbine, long used by the US military.  Though accurate, small, and lightweight, it is infamous for its unreliability when not properly maintained.",
-        "ascii_picture": "modular_m4a1",
-        "weight": 1
+        "ascii_picture": "modular_m4a1"
       }
     ],
     "to_hit": -1,
@@ -151,7 +149,7 @@
     "durability": 6,
     "min_cycle_recoil": 1350,
     "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
-    "flags": [ "OBSOLETE" ],
+    "flags": [ "OBSOLETE", "NO_TURRET" ],
     "pocket_data": [
       {
         "pocket_type": "MAGAZINE_WELL",
@@ -196,8 +194,7 @@
       {
         "id": "m16a4",
         "name": { "str": "M16A4" },
-        "description": "The M16 is a very common assault rifle descended from the AR-15, used by militaries across the world for over 50 years.  It is a gas-operated, rotating bolt rifle known for its accuracy and controllable recoil.",
-        "weight": 1
+        "description": "The M16 is a very common assault rifle descended from the AR-15, used by militaries across the world for over 50 years.  It is a gas-operated, rotating bolt rifle known for its accuracy and controllable recoil."
       }
     ],
     "to_hit": -1,
@@ -209,7 +206,7 @@
     "durability": 7,
     "min_cycle_recoil": 1350,
     "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "3 rd.", 3 ] ],
-    "flags": [ "OBSOLETE" ],
+    "flags": [ "OBSOLETE", "NO_TURRET" ],
     "pocket_data": [
       {
         "pocket_type": "MAGAZINE_WELL",
@@ -249,8 +246,7 @@
       {
         "id": "m16a3",
         "name": { "str": "M16A3" },
-        "description": "The M16 is a very common assault rifle descended from the AR-15, used by militaries across the world for over 50 years.  It is a gas-operated, rotating bolt rifle known for its accuracy and controllable recoil.  This one is a relatively rare M16A3, with full auto capability.",
-        "weight": 1
+        "description": "The M16 is a very common assault rifle descended from the AR-15, used by militaries across the world for over 50 years.  It is a gas-operated, rotating bolt rifle known for its accuracy and controllable recoil.  This one is a relatively rare M16A3, with full auto capability."
       },
       {
         "id": "acr",
@@ -259,6 +255,6 @@
       }
     ],
     "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
-    "flags": [ "OBSOLETE" ]
+    "flags": [ "OBSOLETE", "NO_TURRET" ]
   }
 ]

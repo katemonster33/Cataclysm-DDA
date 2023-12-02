@@ -1561,7 +1561,7 @@ static void place_ter_or_special( const ui_adaptor &om_ui, tripoint_abs_omt &cur
             mvwprintz( w_editor, point( 1, 3 ), c_light_gray, "                         " );
             mvwprintz( w_editor, point( 1, 3 ), c_light_gray, _( "Rotation: %s %s" ), rotation,
                        can_rotate ? "" : _( "(fixed)" ) );
-            mvwprintz( w_editor, point( 1, 5 ), c_red, _( "Areas highlighted in red" ) );
+            mvwprintz( w_editor, point( 1, 5 ), c_red, _( "Highlighted regions" ) );
             mvwprintz( w_editor, point( 1, 6 ), c_red, _( "already have map content" ) );
             // NOLINTNEXTLINE(cata-text-style): single space after period for compactness
             mvwprintz( w_editor, point( 1, 7 ), c_red, _( "generated. Their overmap" ) );
@@ -1698,7 +1698,7 @@ static std::vector<tripoint_abs_omt> get_overmap_path_to( const tripoint_abs_omt
         // already in water or going to a water tile
         if( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, player_character.pos() ) ||
             is_river_or_lake( dest_ter ) ) {
-            params.water_cost = 100;
+            params.set_cost( oter_travel_cost_type::water, 100 );
         }
     }
     // literal "edge" case: the vehicle may be in a different OMT than the player
@@ -1802,7 +1802,6 @@ static tripoint_abs_omt display( const tripoint_abs_omt &orig,
     ictxt.register_action( "CHOOSE_DESTINATION" );
     ictxt.register_action( "CENTER_ON_DESTINATION" );
     ictxt.register_action( "GO_TO_DESTINATION" );
-
 
     // Actions whose keys we want to display.
     ictxt.register_action( "CENTER" );

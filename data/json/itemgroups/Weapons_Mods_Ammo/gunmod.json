@@ -7,10 +7,12 @@
       [ "belt_clip", 5 ],
       [ "brass_catcher", 100 ],
       [ "improve_sights", 60 ],
+      [ "compensator", 40 ],
       [ "muzzle_brake", 20 ],
       [ "pistol_grip", 30 ],
       [ "rifle_scope", 30 ],
       [ "shoulder_strap", 50 ],
+      [ "shoulder_strap_simple", 70 ],
       [ "single_sling", 50 ],
       [ "butt_hook", 30 ],
       [ "match_trigger", 20 ],
@@ -75,43 +77,6 @@
       [ "m26_mass", 35 ],
       [ "rm121aux", 10 ],
       [ "sword_bayonet", 10 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "sights_all",
-    "//": "All aftermarket sights.",
-    "items": [
-      [ "improve_sights", 84 ],
-      [ "offset_sights", 6 ],
-      [ "red_dot_sight", 42 ],
-      [ "holo_sight", 18 ],
-      [ "laser_sight", 15 ],
-      [ "rail_laser_sight", 6 ],
-      [ "acog_scope", 21 ],
-      [ "hybrid_sight_4x", 15 ],
-      [ "rifle_scope", 25 ],
-      [ "rifle_scope_high_end_mount", 10 ],
-      [ "pistol_scope", 4 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "sights_pistol",
-    "//": "Aftermarket sights that are for pistols.",
-    "items": [ [ "improve_sights", 84 ], [ "red_dot_sight", 42 ], [ "laser_sight", 15 ], [ "pistol_scope", 4 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "sights_SMG",
-    "//": "Aftermarket sights that are for SMG's.",
-    "items": [
-      [ "improve_sights", 84 ],
-      [ "red_dot_sight", 42 ],
-      [ "holo_sight", 18 ],
-      [ "laser_sight", 15 ],
-      [ "rail_laser_sight", 6 ],
-      [ "pistol_scope", 4 ]
     ]
   },
   {
@@ -194,12 +159,6 @@
   },
   {
     "type": "item_group",
-    "id": "sights_launcher",
-    "//": "Aftermarket sights that are for launchers.",
-    "items": [ [ "improve_sights", 84 ], [ "red_dot_sight", 42 ], [ "holo_sight", 18 ] ]
-  },
-  {
-    "type": "item_group",
     "id": "gunmod_energy",
     "//": "Gunmods for energy weaponry found only at military sites and laboratories.",
     "items": [
@@ -209,11 +168,5 @@
       [ "effective_emitter", 40 ],
       [ "high_density_capacitor", 60 ]
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "gunmod_archery",
-    "//": "Gunmods for bows and crossbows.",
-    "items": [ [ "arrowrest", 100 ], [ "bow_sight", 100 ], [ "bow_stabilizer", 100 ] ]
   }
 ]

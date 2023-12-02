@@ -27,6 +27,7 @@ static const oter_str_id oter_cabin_west( "cabin_west" );
 
 static const oter_type_str_id oter_type_ants_lab( "ants_lab" );
 static const oter_type_str_id oter_type_ants_lab_stairs( "ants_lab_stairs" );
+static const oter_type_str_id oter_type_bandit_drug_lab( "bandit_drug_lab" );
 static const oter_type_str_id oter_type_bunker_shop_b( "bunker_shop_b" );
 static const oter_type_str_id oter_type_bunker_shop_g( "bunker_shop_g" );
 static const oter_type_str_id oter_type_deserter_city_gate( "deserter_city_gate" );
@@ -52,6 +53,11 @@ static const oter_type_str_id oter_type_s_gas_g0_roof( "s_gas_g0_roof" );
 static const oter_type_str_id oter_type_s_gas_g1( "s_gas_g1" );
 static const oter_type_str_id oter_type_s_gas_g1_roof( "s_gas_g1_roof" );
 static const oter_type_str_id oter_type_s_restaurant_deserted_test( "s_restaurant_deserted_test" );
+static const oter_type_str_id oter_type_unvitrified_farm_0( "unvitrified_farm_0" );
+static const oter_type_str_id oter_type_unvitrified_farm_1( "unvitrified_farm_1" );
+static const oter_type_str_id oter_type_unvitrified_farm_2( "unvitrified_farm_2" );
+static const oter_type_str_id oter_type_unvitrified_farm_neg_1( "unvitrified_farm_neg_1" );
+static const oter_type_str_id oter_type_unvitrified_orchard( "unvitrified_orchard" );
 
 static const overmap_special_id overmap_special_Cabin( "Cabin" );
 static const overmap_special_id overmap_special_Lab( "Lab" );
@@ -307,6 +313,7 @@ TEST_CASE( "overmap_terrain_coverage", "[overmap][slow]" )
     std::unordered_set<oter_type_id> whitelist = {
         oter_type_ants_lab.id(), // ant lab is a very improbable spawn
         oter_type_ants_lab_stairs.id(),
+        oter_type_bandit_drug_lab.id(),
         oter_type_bunker_shop_b.id(),
         oter_type_bunker_shop_g.id(),
         oter_type_deserter_city_gate.id(),
@@ -332,6 +339,11 @@ TEST_CASE( "overmap_terrain_coverage", "[overmap][slow]" )
         oter_type_s_gas_g1.id(),
         oter_type_s_gas_g1_roof.id(),
         oter_type_s_restaurant_deserted_test.id(), // only in the desert test region
+        oter_type_unvitrified_orchard.id(),
+        oter_type_unvitrified_farm_0.id(),
+        oter_type_unvitrified_farm_1.id(),
+        oter_type_unvitrified_farm_2.id(),
+        oter_type_unvitrified_farm_neg_1.id(),
     };
 
     std::unordered_set<oter_type_id> done;

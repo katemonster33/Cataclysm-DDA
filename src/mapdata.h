@@ -251,6 +251,9 @@ enum class ter_furn_flag : int {
     TFLAG_YOUNG,
     TFLAG_PLANT,
     TFLAG_FISHABLE,
+    TFLAG_GRAZABLE,
+    TFLAG_GRAZER_INEDIBLE,
+    TFLAG_BROWSABLE,
     TFLAG_TREE,
     TFLAG_PLOWABLE,
     TFLAG_ORGANIC,
@@ -297,6 +300,7 @@ enum class ter_furn_flag : int {
     TFLAG_ALARMED,
     TFLAG_CHOCOLATE,
     TFLAG_SIGN,
+    TFLAG_SIGN_ALWAYS,
     TFLAG_DONT_REMOVE_ROTTEN,
     TFLAG_BLOCKSDOOR,
     TFLAG_NO_SELF_CONNECT,
@@ -307,6 +311,8 @@ enum class ter_furn_flag : int {
     TFLAG_TOILET_WATER,
     TFLAG_ELEVATOR,
     TFLAG_ACTIVE_GENERATOR,
+    TFLAG_SMALL_HIDE,
+    TFLAG_NO_FLOOR_WATER,
 
     NUM_TFLAG_FLAGS
 };
@@ -486,7 +492,7 @@ struct map_data_common_t {
         // The coverage percentage of a furniture piece of terrain. <30 won't cover from sight.
         int coverage = 0;
         // Warmth provided by the terrain (for sleeping, etc.)
-        int floor_bedding_warmth = 0;
+        units::temperature_delta floor_bedding_warmth = 0_C_delta;
         int comfort = 0;
         // Maximal volume of items that can be stored in/on this furniture
         units::volume max_volume = 1000_liter;
@@ -635,7 +641,7 @@ struct furn_t : map_data_common_t {
     /** Emissions of furniture */
     std::set<emit_id> emissions;
 
-    int bonus_fire_warmth_feet = 300;
+    units::temperature_delta bonus_fire_warmth_feet = 0.6_C_delta;
     itype_id deployed_item; // item id string used to create furniture
 
     int move_str_req = 0; //The amount of strength required to move through this furniture easily.
@@ -689,6 +695,7 @@ extern ter_id t_null,
        t_pit_corpsed, t_pit_covered, t_pit_spiked, t_pit_spiked_covered, t_pit_glass, t_pit_glass_covered,
        t_rock_floor,
        t_grass, t_grass_long, t_grass_tall, t_grass_golf, t_grass_dead, t_grass_white, t_moss,
+       t_grass_alien,
        t_metal_floor,
        t_pavement, t_pavement_y, t_sidewalk, t_concrete, t_zebra,
        t_thconc_floor, t_thconc_floor_olight, t_strconc_floor,
@@ -830,7 +837,7 @@ extern furn_id f_null, f_clear,
        f_mutpoppy, f_flower_fungal, f_fungal_mass, f_fungal_clump,
        f_safe_c, f_safe_l, f_safe_o,
        f_plant_seed, f_plant_seedling, f_plant_mature, f_plant_harvest,
-       f_fvat_empty, f_fvat_full,
+       f_fvat_empty, f_fvat_full, f_fvat_wood_empty, f_fvat_wood_full,
        f_wood_keg,
        f_standing_tank,
        f_egg_sackbw, f_egg_sackcs, f_egg_sackws, f_egg_sacke,
@@ -839,6 +846,7 @@ extern furn_id f_null, f_clear,
        f_kiln_empty, f_kiln_full, f_kiln_metal_empty, f_kiln_metal_full,
        f_arcfurnace_empty, f_arcfurnace_full,
        f_smoking_rack, f_smoking_rack_active, f_metal_smoking_rack, f_metal_smoking_rack_active,
+       f_stook_empty, f_stook_full,
        f_water_mill, f_water_mill_active,
        f_wind_mill, f_wind_mill_active,
        f_robotic_arm, f_vending_reinforced,

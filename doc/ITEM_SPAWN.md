@@ -92,10 +92,13 @@ Each entry can have more values (shown above as `...`).  They allow further prop
 "ammo-item": "<ammo-item-id>",
 "ammo-group": "<group-id>",
 "container-group": "<group-id>",
+"entry-wrapper": "<item-id>",
 "sealed": <boolean>
+"custom-flags": <array of string>,
 "variant": <string>
 "artifact": <object>
 "event": <string>
+"snippets": <string>
 ```
 
 `contents` is added as contents of the created item.  It is not checked if they can be put into the item.  This allows water, that contains a book, that contains a steel frame, that contains a corpse.
@@ -106,9 +109,13 @@ Each entry can have more values (shown above as `...`).  They allow further prop
 
 `sealed`: If true, a container will be sealed when the item spawns.  Default is `true`.
 
+`custom-flags`: An array of flags that will be applied to this item.
+
 `variant`: A valid itype variant id for this item.
 
 `event`: A reference to a holiday in the `holiday` enum. If specified, the entry only spawns during the specified real holiday. This works the same way as the seasonal title screens, where the holiday is checked against the current system's time. If the holiday matches, the item's spawn probability is taken from the `prob` field. Otherwise, the spawn probability becomes 0.
+
+`snippets`: If item uses `snippet_category` instead of description, and snippets contain ids, allow to pick a specific description of an item to spawn; see [JSON_INFO.md#snippets](JSON_INFO.md#snippets)
 
 Current possible values are:
 - "none" (Not event-based. Same as omitting the "event" field.)
@@ -135,6 +142,8 @@ The procgen_id relates directly to a `relic_procgen_data` object's id. The `rule
 This will create 4 items; they can have different damage levels as the damage value is rolled separately for each of these items.  Each item has charges (AKA ammo) in the range of 10 to 100 (inclusive); if the item needs a magazine before it can have charges, that will be taken care of for you.  Using an array (which must have 2 entries) for charges/count/damage is equivalent to writing explicit min and max values.  In other words, `"count": [a,b]` is the same as `"count-min": a, "count-max": b`.
 
 The container is checked and the item is put inside the container, and the charges of the item are capped/increased to match the size of the container.
+
+`entry-wrapper`: Used for spawning lots of non-stackable items inside a container.  Instead of creating a dedicated itemgroup for that, you can use this field to define that inside an entry.  Note that you may want to set `container-item` to null to override the item's default container.
 
 ### Ammo and Magazines
 

@@ -1,9 +1,11 @@
+#pragma once
 #ifndef CATA_SRC_RANGED_H
 #define CATA_SRC_RANGED_H
 
 #include <iosfwd>
 #include <vector>
 
+#include "creature.h"
 #include "point.h"
 
 class aim_activity_actor;
@@ -25,6 +27,9 @@ namespace target_handler
 {
 // Trajectory to target. Empty if selection was aborted or player ran out of moves
 using trajectory = std::vector<tripoint>;
+
+/** Generic target select without fire something */
+trajectory mode_select_only( avatar &you, int range );
 
 /**
  * Firing ranged weapon. This mode allows spending moves on aiming.
@@ -74,6 +79,8 @@ double calc_steadiness( const Character &you, const item &weapon, const tripoint
                         double predicted_recoil );
 
 double calculate_aim_cap( const Character &you, const tripoint &target );
+
+double occupied_tile_fraction( creature_size target_size );
 
 struct Target_attributes {
     int range = 1;

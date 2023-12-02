@@ -561,7 +561,14 @@
         "@@",
         "@@"
       ],
-      "item": { "@": [ { "item": "cattlefodder", "chance": 10, "repeat": 5 }, { "item": "straw_pile", "chance": 10, "repeat": 5 } ] }
+      "item": {
+        "@": [
+          { "item": "cattlefodder", "chance": 10, "repeat": 5 },
+          { "item": "straw_pile", "chance": 10, "repeat": 5 },
+          { "item": "cattlefodder_medium", "chance": 5, "repeat": 3 },
+          { "item": "cattlefodder_large", "chance": 3, "repeat": 2 }
+        ]
+      }
     }
   },
   {
@@ -1014,7 +1021,7 @@
   {
     "type": "mapgen",
     "method": "json",
-    "nested_mapgen_id": "14x14_trail_intersection_north",
+    "nested_mapgen_id": "14x14_forest_trail_intersection_north",
     "object": {
       "mapgensize": [ 14, 14 ],
       "rotation": [ 0, 3 ],
@@ -1042,7 +1049,7 @@
   {
     "type": "mapgen",
     "method": "json",
-    "nested_mapgen_id": "14x14_trail_intersection_east",
+    "nested_mapgen_id": "14x14_forest_trail_intersection_east",
     "object": {
       "mapgensize": [ 14, 14 ],
       "rotation": [ 0, 3 ],
@@ -1070,7 +1077,7 @@
   {
     "type": "mapgen",
     "method": "json",
-    "nested_mapgen_id": "14x14_trail_intersection_south",
+    "nested_mapgen_id": "14x14_forest_trail_intersection_south",
     "object": {
       "mapgensize": [ 14, 14 ],
       "rotation": [ 0, 3 ],
@@ -1098,7 +1105,7 @@
   {
     "type": "mapgen",
     "method": "json",
-    "nested_mapgen_id": "14x14_trail_intersection_west",
+    "nested_mapgen_id": "14x14_forest_trail_intersection_west",
     "object": {
       "mapgensize": [ 14, 14 ],
       "rotation": [ 0, 3 ],
@@ -1141,7 +1148,7 @@
       ],
       "palettes": [ "farm_lots" ],
       "terrain": { "_": "t_null" },
-      "item": { "_": { "item": "cattlefodder", "chance": 20, "repeat": 10 } },
+      "item": { "_": { "item": "cattlefodder_large", "chance": 20, "repeat": 10 } },
       "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
     }
   },

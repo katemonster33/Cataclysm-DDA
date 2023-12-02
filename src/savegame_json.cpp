@@ -257,7 +257,7 @@ void item_pocket::deserialize( const JsonObject &data )
     data.read( "contents", contents );
     int saved_type_int;
     data.read( "pocket_type", saved_type_int );
-    _saved_type = static_cast<item_pocket::pocket_type>( saved_type_int );
+    _saved_type = static_cast<pocket_type>( saved_type_int );
     data.read( "_sealed", _sealed );
     _saved_sealed = _sealed;
     data.read( "no_rigid", no_rigid );
@@ -280,6 +280,7 @@ void item_pocket::favorite_settings::serialize( JsonOut &json ) const
     json.member( "collapsed", collapsed );
     json.member( "disabled", disabled );
     json.member( "unload", unload );
+    json.member( "player_edited", player_edited );
     json.end_object();
 }
 
@@ -302,6 +303,11 @@ void item_pocket::favorite_settings::deserialize( const JsonObject &data )
     }
     if( data.has_member( "unload" ) ) {
         data.read( "unload", unload );
+    }
+    if( data.has_member( "player_edited" ) ) {
+        data.read( "player_edited", player_edited );
+    } else {
+        player_edited = true;
     }
 }
 
@@ -469,8 +475,7 @@ void SkillLevel::deserialize( const JsonObject &data )
     data.read( "istraining", _isTraining );
     data.read( "rustaccumulator", _rustAccumulator );
     if( !data.read( "lastpracticed", _lastPracticed ) ) {
-        _lastPracticed = calendar::start_of_cataclysm + time_duration::from_hours(
-                             get_option<int>( "INITIAL_TIME" ) );
+        _lastPracticed = calendar::start_of_game;
     }
     data.read( "knowledgeLevel", _knowledgeLevel );
     if( _knowledgeLevel < _level ) {
@@ -761,8 +766,6 @@ void Character::load( const JsonObject &data )
 
     data.read( "magic", magic );
 
-    data.read( "underwater", underwater );
-
     data.read( "traits", my_traits );
     // If a trait has been migrated, we'll need to add it.
     // Queue them up to add at the end, because adding and removing at the same time is hard
@@ -840,7 +843,7 @@ void Character::load( const JsonObject &data )
     update_bionic_power_capacity();
     data.read( "death_eocs", death_eocs );
     worn.on_takeoff( *this );
-    worn.clear();
+    clear_worn();
     // deprecate after 0.G
     if( data.has_array( "worn" ) ) {
         std::list<item> items;
@@ -930,7 +933,7 @@ void Character::load( const JsonObject &data )
     if( data.has_array( "temp_cur" ) ) {
         set_anatomy( anatomy_human_anatomy );
         set_body();
-        std::array<int, 12> temp_cur;
+        std::array<units::temperature, 12> temp_cur;
         temp_cur.fill( BODYTEMP_NORM );
         data.read( "temp_cur", temp_cur );
         set_part_temp_cur( bodypart_id( "torso" ), temp_cur[0] );
@@ -949,7 +952,7 @@ void Character::load( const JsonObject &data )
     if( data.has_array( "temp_conv" ) ) {
         set_anatomy( anatomy_human_anatomy );
         set_body();
-        std::array<int, 12> temp_conv;
+        std::array<units::temperature, 12> temp_conv;
         temp_conv.fill( BODYTEMP_NORM );
         data.read( "temp_conv", temp_conv );
         set_part_temp_conv( bodypart_id( "torso" ), temp_conv[0] );
@@ -1181,24 +1184,24 @@ void Character::load( const JsonObject &data )
                         item gasoline( "gasoline" );
                         gasoline.charges = std::stoi( get_value( "gasoline" ) );
                         remove_value( "gasoline" );
-                        pseudo.put_in( gasoline, item_pocket::pocket_type::CONTAINER );
+                        pseudo.put_in( gasoline, pocket_type::CONTAINER );
                     } else if( b_it == itype_internal_ethanol_tank && !get_value( "alcohol" ).empty() ) {
                         item ethanol( "chem_ethanol" );
                         ethanol.charges = std::stoi( get_value( "alcohol" ) );
                         remove_value( "alcohol" );
-                        pseudo.put_in( ethanol, item_pocket::pocket_type::CONTAINER );
+                        pseudo.put_in( ethanol, pocket_type::CONTAINER );
                     } else if( b_it == itype_internal_oil_tank && !get_value( "motor_oil" ).empty() ) {
                         item oil( "motor_oil" );
                         oil.charges = std::stoi( get_value( "motor_oil" ) );
                         remove_value( "motor_oil" );
-                        pseudo.put_in( oil, item_pocket::pocket_type::CONTAINER );
+                        pseudo.put_in( oil, pocket_type::CONTAINER );
                     } else if( b_it == itype_internal_battery_compartment && !get_value( "battery" ).empty() ) {
                         item battery( "medium_battery_cell" );
                         item battery_charge( "battery" );
                         battery_charge.charges = std::min( 500, std::stoi( get_value( "battery" ) ) );
-                        battery.put_in( battery_charge, item_pocket::pocket_type::MAGAZINE );
+                        battery.put_in( battery_charge, pocket_type::MAGAZINE );
                         remove_value( "battery" );
-                        pseudo.put_in( battery, item_pocket::pocket_type::MAGAZINE_WELL );
+                        pseudo.put_in( battery, pocket_type::MAGAZINE_WELL );
                     }
 
                     wear_item( pseudo, false );
@@ -1253,6 +1256,13 @@ void Character::load( const JsonObject &data )
         bcdata.read( "pos", bcpt );
         camps.insert( bcpt );
     }
+
+    data.read( "hauling", hauling );
+    data.read( "autohaul", autohaul );
+    data.read( "hauling_filter", hauling_filter );
+    data.read( "haul_list", haul_list );
+    data.read( "suppress_autohaul", suppress_autohaul );
+
     //load queued_eocs
     for( JsonObject elem : data.get_array( "queued_effect_on_conditions" ) ) {
         queued_eoc temp;
@@ -1485,9 +1495,15 @@ void Character::store( JsonOut &json ) const
     }
     json.end_array();
 
+    // Hauling state
+    json.member( "hauling", hauling );
+    json.member( "autohaul", autohaul );
+    json.member( "hauling_filter", hauling_filter );
+    json.member( "haul_list", haul_list );
+    json.member( "suppress_autohaul", suppress_autohaul );
+
     //save queued effect_on_conditions
-    std::priority_queue<queued_eoc, std::vector<queued_eoc>, eoc_compare> temp_queued(
-        queued_effect_on_conditions );
+    queued_eocs temp_queued( queued_effect_on_conditions );
     json.member( "queued_effect_on_conditions" );
     json.start_array();
     while( !temp_queued.empty() ) {
@@ -2045,15 +2061,15 @@ void dialogue_chatbin::deserialize( const JsonObject &data )
 
     std::vector<int> tmpmissions;
     data.read( "missions", tmpmissions );
-    missions = mission::to_ptr_vector( tmpmissions );
+    missions = mission::to_ptr_vector( tmpmissions, /* ok_missing */ true );
     std::vector<int> tmpmissions_assigned;
     data.read( "missions_assigned", tmpmissions_assigned );
-    missions_assigned = mission::to_ptr_vector( tmpmissions_assigned );
+    missions_assigned = mission::to_ptr_vector( tmpmissions_assigned, /* ok_missing */ true );
 
     int tmpmission_selected = 0;
     mission_selected = nullptr;
     if( data.read( "mission_selected", tmpmission_selected ) && tmpmission_selected != -1 ) {
-        mission_selected = mission::find( tmpmission_selected );
+        mission_selected = mission::find( tmpmission_selected, /* ok_missing */ true );
     }
 }
 
@@ -2139,6 +2155,7 @@ void job_data::serialize( JsonOut &json ) const
 {
     json.start_object();
     json.member( "task_priorities", task_priorities );
+    json.member( "fetch_history", fetch_history );
     json.end_object();
 }
 
@@ -2148,6 +2165,7 @@ void job_data::deserialize( const JsonValue &jv )
         JsonObject jo = jv;
         jo.allow_omitted_members();
         jo.read( "task_priorities", task_priorities );
+        jo.read( "fetch_history", fetch_history );
     }
 }
 
@@ -2361,6 +2379,8 @@ void npc::load( const JsonObject &data )
         complaints.emplace( member.name(), p );
     }
     data.read( "unique_id", unique_id );
+    clear_personality_traits();
+    generate_personality_traits();
 }
 
 /*
@@ -2703,6 +2723,8 @@ void monster::load( const JsonObject &data )
 
     data.read( "mounted_player_id", mounted_player_id );
     data.read( "path", path );
+
+    data.read( "grabbed_limbs", grabbed_limbs );
 }
 
 /*
@@ -2777,6 +2799,9 @@ void monster::store( JsonOut &json ) const
     json.member( "dragged_foe_id", dragged_foe_id );
     // storing the rider
     json.member( "mounted_player_id", mounted_player_id );
+
+    // store grabbed limbs
+    json.member( "grabbed_limbs", grabbed_limbs );
 }
 
 void mon_special_attack::serialize( JsonOut &json ) const
@@ -2857,11 +2882,12 @@ void item::link_data::serialize( JsonOut &jsout ) const
     jsout.member( "link_t_state", t_state );
     jsout.member( "link_t_abs_pos", t_abs_pos );
     jsout.member( "link_t_mount", t_mount );
+    jsout.member( "link_length", length );
     jsout.member( "link_max_length", max_length );
     jsout.member( "link_last_processed", last_processed );
     jsout.member( "link_charge_rate", charge_rate );
+    jsout.member( "link_charge_efficiency", efficiency );
     jsout.member( "link_charge_interval", charge_interval );
-    jsout.member( "link_charge_efficiency", charge_efficiency );
     jsout.end_object();
 }
 
@@ -2873,11 +2899,12 @@ void item::link_data::deserialize( const JsonObject &data )
     data.read( "link_t_state", t_state );
     data.read( "link_t_abs_pos", t_abs_pos );
     data.read( "link_t_mount", t_mount );
-    max_length = data.get_int( "link_max_length" );
+    data.read( "link_length", length );
+    data.read( "link_max_length", max_length );
     data.read( "link_last_processed", last_processed );
-    charge_rate = data.get_int( "link_charge_rate" );
-    charge_interval = data.get_int( "link_charge_interval" );
-    charge_efficiency = data.get_int( "link_charge_efficiency" );
+    data.read( "link_charge_rate", charge_rate );
+    data.read( "link_charge_efficiency", efficiency );
+    data.read( "link_charge_interval", charge_interval );
 }
 
 // Template parameter because item::craft_data is private and I don't want to make it public.
@@ -2905,16 +2932,6 @@ void load_charge_removal_blacklist( const JsonObject &jo, const std::string_view
     std::set<itype_id> new_blacklist;
     jo.read( "list", new_blacklist );
     charge_removal_blacklist.insert( new_blacklist.begin(), new_blacklist.end() );
-}
-
-static std::set<itype_id> charge_migration_blacklist;
-
-void load_charge_migration_blacklist( const JsonObject &jo, const std::string_view/*src*/ )
-{
-    jo.allow_omitted_members();
-    std::set<itype_id> new_blacklist;
-    jo.read( "list", new_blacklist );
-    charge_migration_blacklist.insert( new_blacklist.begin(), new_blacklist.end() );
 }
 
 static std::set<itype_id> temperature_removal_blacklist;
@@ -2978,7 +2995,6 @@ void item::io( Archive &archive )
     archive.io( "item_counter", item_counter, static_cast<decltype( item_counter )>( 0 ) );
     archive.io( "countdown_point", countdown_point, calendar::turn_max );
     archive.io( "wetness", wetness, 0 );
-    archive.io( "contents_linked", contents_linked, false );
     archive.io( "dropped_from", dropped_from, harvest_drop_type_id::NULL_ID() );
     archive.io( "rot", rot, 0_turns );
     archive.io( "last_temp_check", last_temp_check, calendar::start_of_cataclysm );
@@ -3161,13 +3177,19 @@ void item::io( Archive &archive )
     if( charges != 0 && !type->can_have_charges() ) {
         // Types that are known to have charges, but should not have them.
         // We fix it here, but it's expected from bugged saves and does not require a message.
-        if( charge_migration_blacklist.count( type->get_id() ) != 0 ) {
+        bool still_has_charges = false;
+        if( charge_removal_blacklist.count( type->get_id() ) == 0 ) {
             for( int i = 0; i < charges - 1; i++ ) {
-                put_in( item( type ), item_pocket::pocket_type::MIGRATION );
+                item copy( type );
+                if( copy.charges != 0 ) {
+                    still_has_charges = true;
+                    copy.charges = 0;
+                }
+                put_in( copy, pocket_type::MIGRATION );
             }
-        } else if( charge_removal_blacklist.count( type->get_id() ) == 0 ) {
-            debugmsg( "Item %s was loaded with charges, but can not have any!",
-                      type->get_id().str() );
+            if( still_has_charges ) {
+                debugmsg( "Item %s can't have charges, but still had them after migration.", type->get_id().str() );
+            }
         }
         charges = 0;
     }
@@ -3176,20 +3198,20 @@ void item::io( Archive &archive )
 void item::migrate_content_item( const item &contained )
 {
     if( contained.is_gunmod() || contained.is_toolmod() ) {
-        put_in( contained, item_pocket::pocket_type::MOD );
+        put_in( contained, pocket_type::MOD );
     } else if( typeId() == itype_usb_drive ) {
         // as of this migration, only usb_drive has any software in it.
-        put_in( contained, item_pocket::pocket_type::SOFTWARE );
-    } else if( contents.insert_item( contained, item_pocket::pocket_type::MAGAZINE ).success() ||
-               contents.insert_item( contained, item_pocket::pocket_type::MAGAZINE_WELL ).success() ) {
+        put_in( contained, pocket_type::SOFTWARE );
+    } else if( contents.insert_item( contained, pocket_type::MAGAZINE ).success() ||
+               contents.insert_item( contained, pocket_type::MAGAZINE_WELL ).success() ) {
         // left intentionally blank
     } else if( is_corpse() ) {
-        put_in( contained, item_pocket::pocket_type::CORPSE );
+        put_in( contained, pocket_type::CORPSE );
     } else if( can_contain( contained ).success() ) {
-        put_in( contained, item_pocket::pocket_type::CONTAINER );
+        put_in( contained, pocket_type::CONTAINER );
     } else {
         // we want this to silently fail - the contents will fall out later
-        put_in( contained, item_pocket::pocket_type::MIGRATION );
+        put_in( contained, pocket_type::MIGRATION );
     }
 }
 
@@ -3216,7 +3238,7 @@ void item::deserialize( const JsonObject &data )
 
         contents.read_mods( read_contents );
         update_modified_pockets();
-        contents.combine( read_contents, false, true, false );
+        contents.combine( read_contents, false, true, false, true );
 
         if( data.has_object( "contents" ) ) {
             JsonObject tested = data.get_object( "contents" );
@@ -3344,6 +3366,7 @@ void vehicle_part::deserialize( const JsonObject &data )
     data.read( "crew_id", crew_id );
     data.read( "items", items );
     data.read( "tools", tools );
+    data.read( "salvageable", salvageable );
     data.read( "target_first_x", target.first.x );
     data.read( "target_first_y", target.first.y );
     data.read( "target_first_z", target.first.z );
@@ -3351,6 +3374,8 @@ void vehicle_part::deserialize( const JsonObject &data )
     data.read( "target_second_y", target.second.y );
     data.read( "target_second_z", target.second.z );
     data.read( "ammo_pref", ammo_pref );
+    data.read( "locked", locked );
+    data.read( "last_disconnected", last_disconnected );
 
     if( migration != nullptr ) {
         for( const itype_id &it : migration->add_veh_tools ) {
@@ -3362,7 +3387,7 @@ void vehicle_part::deserialize( const JsonObject &data )
 void vehicle_part::serialize( JsonOut &json ) const
 {
     json.start_object();
-    json.member( "id", info_->get_id().str() );
+    json.member( "id", info_->id.str() );
     if( !variant.empty() ) {
         json.member( "variant", variant );
     }
@@ -3391,6 +3416,7 @@ void vehicle_part::serialize( JsonOut &json ) const
     }
     json.member( "items", items );
     json.member( "tools", tools );
+    json.member( "salvageable", salvageable );
     if( target.first != tripoint_min ) {
         json.member( "target_first_x", target.first.x );
         json.member( "target_first_y", target.first.y );
@@ -3402,6 +3428,8 @@ void vehicle_part::serialize( JsonOut &json ) const
         json.member( "target_second_z", target.second.z );
     }
     json.member( "ammo_pref", ammo_pref );
+    json.member( "locked", locked );
+    json.member( "last_disconnected", last_disconnected );
     json.end_object();
 }
 
@@ -3497,6 +3525,7 @@ void vehicle::deserialize( const JsonObject &data )
     data.read( "is_alarm_on", is_alarm_on );
     data.read( "camera_on", camera_on );
     data.read( "autopilot_on", autopilot_on );
+    data.read( "precollision_on", precollision_on );
     data.read( "last_update_turn", last_update );
 
     units::angle fdir_angle = units::from_degrees( fdir );
@@ -3635,6 +3664,7 @@ void vehicle::serialize( JsonOut &json ) const
     json.member( "is_alarm_on", is_alarm_on );
     json.member( "camera_on", camera_on );
     json.member( "autopilot_on", autopilot_on );
+    json.member( "precollision_on", precollision_on );
     json.member( "last_update_turn", last_update );
     json.member( "pivot", pivot_anchor[0] );
     json.member( "is_on_ramp", is_on_ramp );
@@ -4036,7 +4066,7 @@ void mm_submap::serialize( JsonOut &jsout ) const
 
     for( size_t y = 0; y < SEEY; y++ ) {
         for( size_t x = 0; x < SEEX; x++ ) {
-            const memorized_tile &elem = get_tile( point( x, y ) );
+            const memorized_tile &elem = get_tile( point_sm_ms( x, y ) );
             if( x == 0 && y == 0 ) {
                 last = elem;
                 continue;
@@ -4117,7 +4147,7 @@ void mm_submap::deserialize( int version, const JsonArray &ja )
             }
             // Try to avoid assigning to save up on memory
             if( tile != mm_submap::default_tile ) {
-                set_tile( point( x, y ), tile );
+                set_tile( point_sm_ms( x, y ), tile );
             }
         }
     }
@@ -4381,6 +4411,7 @@ void basecamp::serialize( JsonOut &json ) const
         json.member( "pos", omt_pos );
         json.member( "bb_pos", bb_pos );
         json.member( "dumping_spot", dumping_spot );
+        json.member( "liquid_dumping_spots", liquid_dumping_spots );
         json.member( "hidden_missions" );
         json.start_array();
         for( const std::vector<ui_mission_id> &list : hidden_missions ) {
@@ -4465,6 +4496,7 @@ void basecamp::deserialize( const JsonObject &data )
     data.read( "pos", omt_pos );
     data.read( "bb_pos", bb_pos );
     data.read( "dumping_spot", dumping_spot );
+    data.read( "liquid_dumping_spots", liquid_dumping_spots );
     for( int tab_num = base_camps::TAB_MAIN; tab_num <= base_camps::TAB_NW; tab_num++ ) {
         std::vector<ui_mission_id> temp;
         hidden_missions.push_back( temp );

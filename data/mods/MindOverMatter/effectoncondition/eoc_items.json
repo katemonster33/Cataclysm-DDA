@@ -1,0 +1,129 @@
+[
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_ZENER_DECK",
+    "condition": { "math": [ "u_val('spell_level', 'school: CLAIRSENTIENT')", ">=", "10" ] },
+    "effect": [
+      {
+        "switch": { "rand": 4 },
+        "cases": [
+          {
+            "case": 0,
+            "effect": [
+              {
+                "u_message": "You draw the hollow circle card, just as you knew you would.  You look at it for a moment and put it back in the deck."
+              }
+            ]
+          },
+          {
+            "case": 1,
+            "effect": [
+              {
+                "u_message": "You draw the three wavy lines card, just as you knew you would.  You look at it for a moment and put it back in the deck."
+              }
+            ]
+          },
+          {
+            "case": 2,
+            "effect": [
+              {
+                "u_message": "You draw the hollow square card, just as you knew you would.  You look at it for a moment and put it back in the deck."
+              }
+            ]
+          },
+          {
+            "case": 3,
+            "effect": [
+              {
+                "u_message": "You draw the five-pointed star card, just as you knew you would.  You look at it for a moment and put it back in the deck."
+              }
+            ]
+          },
+          {
+            "case": 4,
+            "effect": [
+              {
+                "u_message": "You draw the plus symbol card, just as you knew you would.  You look at it for a moment and put it back in the deck."
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "false_effect": [
+      {
+        "switch": { "rand": 4 },
+        "cases": [
+          {
+            "case": 0,
+            "effect": [ { "u_message": "You draw the hollow circle card, look at it for a moment, and put it back in the deck." } ]
+          },
+          {
+            "case": 1,
+            "effect": [ { "u_message": "You draw the three wavy lines card, look at it for a moment, and put it back in the deck." } ]
+          },
+          {
+            "case": 2,
+            "effect": [ { "u_message": "You draw the hollow square card, look at it for a moment, and put it back in the deck." } ]
+          },
+          {
+            "case": 3,
+            "effect": [ { "u_message": "You draw the five-pointed star card, look at it for a moment, and put it back in the deck." } ]
+          },
+          {
+            "case": 4,
+            "effect": [ { "u_message": "You draw the plus symbol card, look at it for a moment, and put it back in the deck." } ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_INSTABILITY_CREAM",
+    "effect": [
+      {
+        "u_message": "You rub the cream on your skin.  It's cool and soothing at first, but very soon that feeling is replaced by an overpowering itchiness."
+      },
+      { "u_add_effect": "instability_remover", "duration": "24 hours" }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_FORCE_FIELD_GENERATOR_ACTIVATION",
+    "condition": { "u_has_items": { "item": "matrix_crystal_drained", "count": 1 } },
+    "effect": [
+      {
+        "run_eocs": [
+          {
+            "id": "EOC_FORCE_FIELD_GENERATOR_ACTIVATION_2",
+            "condition": { "math": [ "rng(0,99)", ">=", "3" ] },
+            "effect": [
+              { "u_consume_item": "matrix_crystal_drained", "count": 1 },
+              { "u_message": "The matrix crystal cracks into pieces as the device activates!", "type": "mixed" },
+              {
+                "u_add_effect": "force_field_generated",
+                "duration": { "math": [ "(u_val('time: 2 s') * rng(1,6)) " ] }
+              }
+            ],
+            "false_effect": [
+              { "u_message": "The device makes a whining sound and there is a sharp smell of burnt plastic!", "type": "bad" },
+              { "u_consume_item": "matrix_crystal_drained", "count": 1 },
+              { "u_consume_item": "force_field_generator", "count": 1 },
+              { "u_spawn_item": "force_field_generator_broken", "suppress_message": true }
+            ]
+          }
+        ]
+      }
+    ],
+    "false_effect": [ { "u_message": "Without a matrix crystal to power it, flipping the toggle does nothing.", "type": "bad" } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_PSYSHIELD_PARTIAL_EFFECT_GRANTER",
+    "recurrence": [ "2 minutes", "8 minutes" ],
+    "condition": { "u_has_worn_with_flag": "PSYSHIELD_PARTIAL" },
+    "effect": [ { "u_add_effect": "effect_psyshield_protection", "duration": "8 minutes" } ],
+    "false_effect": [ { "u_lose_effect": "effect_psyshield_protection" } ]
+  }
+]

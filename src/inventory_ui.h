@@ -23,9 +23,9 @@
 #include "input.h"
 #include "item_category.h"
 #include "item_location.h"
-#include "item_pocket.h"
 #include "map.h"
 #include "memory_fast.h"
+#include "pocket_type.h"
 #include "pimpl.h"
 #include "translations.h"
 #include "units.h"
@@ -271,7 +271,7 @@ class inventory_selector_preset
             return check_components;
         }
 
-        item_pocket::pocket_type get_pocket_type() const {
+        pocket_type get_pocket_type() const {
             return _pk_type;
         }
 
@@ -309,7 +309,7 @@ class inventory_selector_preset
         bool _indent_entries = true;
         bool _collate_entries = false;
 
-        item_pocket::pocket_type _pk_type = item_pocket::pocket_type::CONTAINER;
+        pocket_type _pk_type = pocket_type::CONTAINER;
 
     private:
         class cell_t
@@ -602,12 +602,14 @@ class inventory_selector : public cataimgui::window
         bool add_contained_items( item_location &container, inventory_column &column,
                                   const item_category *custom_category = nullptr, item_location const &topmost_parent = {},
                                   int indent = 0 );
+        void add_contained_gunmods( Character &you, item &gun );
         void add_contained_ebooks( item_location &container );
         void add_character_items( Character &character );
         void add_map_items( const tripoint &target );
         void add_vehicle_items( const tripoint &target );
         void add_nearby_items( int radius = 1 );
         void add_remote_map_items( tinymap *remote_map, const tripoint &target );
+        void add_basecamp_items( const basecamp &camp );
         /** Remove all items */
         void clear_items();
         /** Assigns a title that will be shown on top of the menu. */
@@ -896,17 +898,12 @@ class inventory_multiselector : public inventory_selector
 {
     public:
         using GetStats = std::function<stats( const std::vector<std::pair<item_location, int>> )>;
-        explicit inventory_multiselector( Character &p,
-                                          const inventory_selector_preset &preset = default_preset,
-                                          const std::string &selection_column_title = "",
-                                          const GetStats & = {},
-                                          bool allow_select_contained = false );
-        inventory_multiselector( cataimgui::window *parent, Character &p,
+        explicit inventory_multiselector( cataimgui::window *parent, Character &p,
                                  const inventory_selector_preset &preset = default_preset,
                                  const std::string &selection_column_title = "",
                                  const GetStats & = {},
                                  bool allow_select_contained = false );
-        drop_locations execute();
+        drop_locations execute( bool allow_empty = false );
         void toggle_entry( inventory_entry &entry, size_t count );
     protected:
         bool is_mine( inventory_entry &entry );
@@ -927,6 +924,20 @@ class inventory_multiselector : public inventory_selector
     private:
         std::unique_ptr<inventory_column> selection_col;
         GetStats get_stats;
+};
+
+class inventory_haul_selector : public inventory_multiselector
+{
+    public:
+        explicit inventory_haul_selector( Character &p );
+        void apply_selection( std::vector<item_location> &items );
+};
+
+class haul_selector_preset : public inventory_selector_preset
+{
+    public:
+        bool is_shown( const item_location &item ) const override;
+        std::string get_denial( const item_location &item ) const override;
 };
 
 class inventory_compare_selector : public inventory_multiselector
@@ -991,6 +1002,15 @@ class pickup_selector : public inventory_multiselector
         void remove_from_to_use( item_location &it );
         void add_reopen_activity();
         const std::optional<tripoint> where;
+};
+
+class unload_selector : public inventory_pick_selector
+{
+    public:
+        explicit unload_selector( Character &p, const inventory_selector_preset &preset = default_preset );
+        std::pair<item_location, bool> execute();
+    private:
+        std::string hint_string();
 };
 
 /**

@@ -428,6 +428,16 @@ inline bool query_yn( const char *const msg, Args &&... args )
     return query_yn( string_format( msg, std::forward<Args>( args )... ) );
 }
 
+enum class query_ynq_result {
+    quit, no, yes
+};
+query_ynq_result query_ynq( const std::string &text );
+template<typename ...Args>
+inline query_ynq_result query_ynq( const char *const msg, Args &&... args )
+{
+    return query_ynq( string_format( msg, std::forward<Args>( args )... ) );
+}
+
 bool query_int( int &result, const std::string &text );
 template<typename ...Args>
 inline bool query_int( int &result, const char *const msg, Args &&... args )
@@ -746,7 +756,6 @@ template<typename BarIterator>
 std::string get_labeled_bar( double val, int width, const std::string &label,
                              BarIterator begin, BarIterator end, std::function<std::string( BarIterator, int )> printer );
 
-
 /**
  * @return String containing the bar. Example: "Label [************]".
  * @param val Value to display. Can be unclipped.
@@ -786,10 +795,10 @@ std::map<std::string, inclusive_rectangle<point>> draw_tabs( const catacurses::w
 // };
 // draw_tabs( w, tabs, current_tab );
 template<typename TabList, typename CurrentTab, typename = std::enable_if_t<
-             std::is_same<CurrentTab,
-                          std::remove_const_t<typename TabList::value_type::first_type>>::value>>
-std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
-        const TabList &tab_list, const CurrentTab &current_tab )
+             std::is_same_v<CurrentTab,
+                            std::remove_const_t<typename TabList::value_type::first_type>>>>
+             std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
+                     const TabList &tab_list, const CurrentTab &current_tab )
 {
     std::vector<std::string> tab_text;
     std::transform( tab_list.begin(), tab_list.end(), std::back_inserter( tab_text ),
@@ -818,10 +827,10 @@ std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::wi
 // Similar to the above, but where the order of tabs is specified separately
 // TabList is expected to be a map type.
 template<typename TabList, typename TabKeys, typename CurrentTab, typename = std::enable_if_t<
-             std::is_same<CurrentTab,
-                          std::remove_const_t<typename TabList::value_type::first_type>>::value>>
-std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
-        const TabList &tab_list, const TabKeys &keys, const CurrentTab &current_tab )
+             std::is_same_v<CurrentTab,
+                            std::remove_const_t<typename TabList::value_type::first_type>>>>
+             std::map<CurrentTab, inclusive_rectangle<point>> draw_tabs( const catacurses::window &w,
+                     const TabList &tab_list, const TabKeys &keys, const CurrentTab &current_tab )
 {
     std::vector<typename TabList::value_type> ordered_tab_list;
     for( const auto &key : keys ) {
@@ -1046,7 +1055,7 @@ class scrolling_text_view
 class scrollingcombattext
 {
     public:
-        enum : int { iMaxSteps = 8 };
+        static constexpr int iMaxSteps = 8;
 
         scrollingcombattext() = default;
 
@@ -1238,7 +1247,7 @@ class tab_list
 
         std::string cur() const {
             if( _list->empty() ) {
-                return std::string( "" );
+                return std::string();
             }
             return ( *_list )[_index];
         }

@@ -139,7 +139,7 @@ static const json_character_flag json_flag_SUBTLE_SPELL( "SUBTLE_SPELL" );
 
 static const material_id material_glass( "glass" );
 
-static const proficiency_id proficiency_prof_helicopter_pilot( "prof_helicopter_pilot" );
+static const mon_flag_str_id mon_flag_RIDEABLE_MECH( "RIDEABLE_MECH" );
 
 static const quality_id qual_CUT( "CUT" );
 
@@ -156,17 +156,17 @@ static const trait_id trait_WAYFARER( "WAYFARER" );
 
 static const zone_type_id zone_type_CHOP_TREES( "CHOP_TREES" );
 static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
+static const zone_type_id zone_type_DISASSEMBLE( "DISASSEMBLE" );
 static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
 static const zone_type_id zone_type_LOOT_CORPSE( "LOOT_CORPSE" );
 static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
 static const zone_type_id zone_type_LOOT_WOOD( "LOOT_WOOD" );
 static const zone_type_id zone_type_MINING( "MINING" );
 static const zone_type_id zone_type_MOPPING( "MOPPING" );
+static const zone_type_id zone_type_STRIP_CORPSES( "STRIP_CORPSES" );
+static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
 static const zone_type_id zone_type_VEHICLE_DECONSTRUCT( "VEHICLE_DECONSTRUCT" );
 static const zone_type_id zone_type_VEHICLE_REPAIR( "VEHICLE_REPAIR" );
-static const zone_type_id zone_type_zone_disassemble( "zone_disassemble" );
-static const zone_type_id zone_type_zone_strip( "zone_strip" );
-static const zone_type_id zone_type_zone_unload_all( "zone_unload_all" );
 
 static const std::string flag_CANT_DRAG( "CANT_DRAG" );
 
@@ -214,6 +214,18 @@ class user_turn
             std::chrono::milliseconds elapsed_ms =
                 std::chrono::duration_cast<std::chrono::milliseconds>( now - user_turn_start );
             return elapsed_ms.count() > get_option<int>( "ANIMATION_DELAY" );
+        }
+
+        std::chrono::steady_clock::time_point last_blink_transition = std::chrono::steady_clock::now();
+        bool blink_timeout() {
+            std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+            std::chrono::milliseconds elapsed_ms =
+                std::chrono::duration_cast<std::chrono::milliseconds>( now - last_blink_transition );
+            if( elapsed_ms.count() > get_option<int>( "BLINK_SPEED" ) ) {
+                last_blink_transition = now;
+                return true;
+            }
+            return false;
         }
 
 };
@@ -397,6 +409,12 @@ input_context game::get_player_input( std::string &action )
 #endif
             }
 
+            if( g->has_blink_curses() && current_turn.blink_timeout() ) {
+                // Toggle blink phase and redraw
+                g->blink_active_phase = !g->blink_active_phase;
+                g->invalidate_main_ui_adaptor();
+            }
+
             ui_manager::redraw_invalidated();
         } while( handle_mouseview( ctxt, action ) && uquit != QUIT_WATCH
                  && ( action != "TIMEOUT" || !current_turn.has_timeout_elapsed() ) );
@@ -510,7 +528,7 @@ static void pldrive( const tripoint &p )
         }
     }
     if( p.z != 0 ) {
-        if( !player_character.has_proficiency( proficiency_prof_helicopter_pilot ) ) {
+        if( !veh->can_control_in_air( player_character ) ) {
             player_character.add_msg_if_player( m_info, _( "You have no idea how to make the vehicle fly." ) );
             return;
         }
@@ -529,6 +547,12 @@ static void pldrive( const tripoint &p )
         if( veh->check_heli_ascend( player_character ) ) {
             player_character.add_msg_if_player( m_info, _( "You steer the vehicle into an ascent." ) );
         } else {
+            return;
+        }
+    }
+    if( !veh->is_flying_in_air() ) {
+        if( !veh->can_control_on_land( player_character ) ) {
+            player_character.add_msg_if_player( m_info, _( "You have no idea how to make the vehicle move." ) );
             return;
         }
     }
@@ -590,11 +614,15 @@ static void open()
                 }
             }
         } else {
-            // If there are any OPENABLE parts here, they must be already open
-            if( const std::optional<vpart_reference> already_open = vp.part_with_feature( "OPENABLE",
-                    true ) ) {
-                const std::string name = already_open->info().name();
-                add_msg( m_info, _( "That %s is already open." ), name );
+            // If there are any OPENABLE parts here, they must be already open or locked
+            if( const std::optional<vpart_reference> openable_part = vp.part_with_feature( "OPENABLE",
+                    true ); openable_part.has_value() ) {
+                const std::string name = openable_part->info().name();
+                if( vp->vehicle().part( openable_part->part_index() ).locked ) {
+                    add_msg( m_info, _( "That %s is locked." ), name );
+                } else {
+                    add_msg( m_info, _( "That %s is already open." ), name );
+                }
             }
             player_character.moves += 100;
         }
@@ -700,23 +728,116 @@ static void grab()
 static void haul()
 {
     Character &player_character = get_player_character();
-    map &here = get_map();
 
-    if( player_character.is_hauling() ) {
-        player_character.stop_hauling();
-    } else {
-        if( here.veh_at( player_character.pos() ) ) {
-            add_msg( m_info, _( "You cannot haul inside vehicles." ) );
-        } else if( here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, player_character.pos() ) ) {
-            add_msg( m_info, _( "You cannot haul while in deep water." ) );
-        } else if( !here.can_put_items( player_character.pos() ) ) {
-            add_msg( m_info, _( "You cannot haul items here." ) );
-        } else if( !here.has_haulable_items( player_character.pos() ) ) {
-            add_msg( m_info, _( "There are no items to haul here." ) );
+    uilist menu;
+
+    bool hauling = player_character.is_hauling();
+    bool autohaul = player_character.is_autohauling();
+    std::vector<item_location> &haul_list = player_character.haul_list;
+    std::vector<item_location> haulable_items = get_map().get_haulable_items( player_character.pos() );
+    int haul_qty = haul_list.size();
+    std::string &haul_filter = player_character.hauling_filter;
+
+
+    std::string help_header =
+        _( "Select items on current tile to haul with you as you move.\nIf autohaul is enabled, you will automatically add encountered items to the haul.\nYou can set a filter to limit which items are automatically added." );
+
+    std::string status_header;
+    if( hauling && autohaul ) {
+        if( haul_qty == 0 ) {
+            status_header =
+                _( "You are currently not hauling any items, but autohaul is enabled, so any new items encoutered on the ground will be hauled." );
         } else {
-            player_character.start_hauling();
+            status_header = string_format(
+                                _( "You are currently hauling %d items.\nAutohaul is enabled, so any new items encountered on the ground will be hauled." ),
+                                haul_qty );
         }
     }
+
+    if( hauling && !autohaul ) {
+        if( haul_qty == 0 ) {
+            debugmsg( "Invalid hauling state: hauling enabled, nothing is being hauled, autohaul is off." );
+        } else {
+            status_header = string_format( _( "You are currently hauling %d items.\nAutohaul is disabled." ),
+                                           haul_qty );
+        }
+    }
+
+    if( !hauling ) {
+        status_header =
+            _( "You are currently not hauling.  Select items to haul or enable autohaul to start." );
+    }
+
+    if( status_header.empty() ) {
+        debugmsg( "Failed to construct status header for haul interface" );
+    }
+
+    status_header += haul_filter.empty() ? _( "\nAutohaul filter not set." ) : string_format(
+                         _( "\nAutohaul filter: %s" ), haul_filter );
+
+    menu.text = help_header + "\n\n" + status_header;
+
+    input_context ctxt = get_default_mode_input_context();
+    std::vector<input_event> haul_keys = ctxt.keys_bound_to( "haul" );
+    int haul_key = haul_keys.empty() ? '\\' : haul_keys.front().sequence.front();
+
+    menu.entries.emplace_back( 0, hauling, hauling ? haul_key : 'h', _( "Stop hauling" ) );
+    menu.entries.emplace_back( 1, !haulable_items.empty(), !hauling ? haul_key : 'h',
+                               _( "Haul everything here" ) );
+    menu.entries.emplace_back( 2, !haulable_items.empty(), 'p', _( "Choose items to haul" ) );
+    menu.entries.emplace_back( 3, true, 'a',
+                               autohaul ? _( "Disable autohaul" ) : _( "Enable autohaul" ) );
+    menu.entries.emplace_back( 4, true, 'f', _( "Edit autohaul filter" ) );
+    menu.entries.emplace_back( 9, true, 'c', _( "Cancel" ) );
+
+    menu.query();
+
+    switch( menu.ret ) {
+        case 0:
+            player_character.stop_hauling();
+            break;
+        case 1:
+            player_character.start_hauling( haulable_items );
+            break;
+        case 2: {
+            inventory_haul_selector selector( player_character );
+            selector.add_map_items( player_character.pos() );
+            selector.apply_selection( player_character.haul_list );
+            selector.set_title( _( "Select items to haul" ) );
+            selector.set_hint( _( "To select x items, type a number before selecting." ) );
+            drop_locations result = selector.execute( true );
+            haulable_items.clear();
+            for( const drop_location &dl : result ) {
+                haulable_items.push_back( dl.first );
+            }
+            if( haulable_items != player_character.haul_list ) {
+                player_character.suppress_autohaul = true;
+            }
+            player_character.start_hauling( haulable_items );
+        }
+        break;
+        case 3:
+            autohaul ? player_character.stop_autohaul() : player_character.start_autohaul();
+            break;
+        case 4:
+            string_input_popup()
+            .title( _( "Filter:" ) )
+            .width( 55 )
+            .description( item_filter_rule_string( item_filter_type::FILTER ) )
+            .desc_color( c_white )
+            .identifier( "item_filter" )
+            .max_length( 256 )
+            .edit( player_character.hauling_filter );
+            break;
+        case 9:
+        default:
+            break;
+    }
+}
+
+static void haul_toggle()
+{
+    get_avatar().toggle_hauling();
 }
 
 static void smash()
@@ -725,7 +846,7 @@ static void smash()
     map &here = get_map();
     if( player_character.is_mounted() ) {
         auto *mons = player_character.mounted_creature.get();
-        if( mons->has_flag( MF_RIDEABLE_MECH ) ) {
+        if( mons->has_flag( mon_flag_RIDEABLE_MECH ) ) {
             if( !mons->check_mech_powered() ) {
                 add_msg( m_bad, _( "Your %s refuses to move as its batteries have been drained." ),
                          mons->get_name() );
@@ -737,19 +858,20 @@ static void smash()
                           player_character.get_wielded_item()->attack_time( player_character ) *
                           0.8;
     bool mech_smash = false;
-    int smashskill;
+    int smashskill = player_character.get_arm_str();
     ///\EFFECT_STR increases smashing capability
     if( player_character.is_mounted() ) {
         auto *mon = player_character.mounted_creature.get();
-        smashskill = player_character.get_arm_str() + mon->mech_str_addition() + mon->type->melee_dice *
-                     mon->type->melee_sides;
+        smashskill += mon->mech_str_addition() + mon->type->melee_dice * mon->type->melee_sides;
         mech_smash = true;
-    } else {
-        smashskill = player_character.get_arm_str();
-        if( player_character.get_wielded_item() ) {
-            smashskill += player_character.get_wielded_item()->damage_melee( damage_bash );
-        }
+    } else if( player_character.get_wielded_item() ) {
+        smashskill += player_character.get_wielded_item()->damage_melee( damage_bash );
     }
+    smashskill = player_character.calculate_by_enchantment( smashskill, enchant_vals::mod::MELEE_DAMAGE,
+                 true );
+    smashskill = player_character.calculate_by_enchantment( smashskill,
+                 enchant_vals::mod::ITEM_DAMAGE_BASH,
+                 true );
 
     const bool allow_floor_bash = debug_mode; // Should later become "true"
     const std::optional<tripoint> smashp_ = choose_adjacent( _( "Smash where?" ), allow_floor_bash );
@@ -772,7 +894,7 @@ static void smash()
         player_character.getID(), here.ter( smashp ).id(), here.furn( smashp ).id() );
     if( player_character.is_mounted() ) {
         monster *crit = player_character.mounted_creature.get();
-        if( crit->has_flag( MF_RIDEABLE_MECH ) ) {
+        if( crit->has_flag( mon_flag_RIDEABLE_MECH ) ) {
             crit->use_mech_power( 3_kJ );
         }
     }
@@ -1254,7 +1376,7 @@ static void loot()
     Character &player_character = get_player_character();
     int flags = 0;
     zone_manager &mgr = zone_manager::get_manager();
-    const bool has_fertilizer = player_character.has_item_with_flag( flag_FERTILIZER );
+    const bool has_fertilizer = player_character.cache_has_item_with( flag_FERTILIZER );
 
     // reset any potentially disabled zones from a past activity
     mgr.reset_disabled();
@@ -1271,8 +1393,8 @@ static void loot()
 
     flags |= g->check_near_zone( zone_type_LOOT_UNSORTED,
                                  player_character.pos() ) ? SortLoot : 0;
-    flags |= g->check_near_zone( zone_type_zone_unload_all, player_character.pos() ) ||
-             g->check_near_zone( zone_type_zone_strip, player_character.pos() ) ? UnloadLoot : 0;
+    flags |= g->check_near_zone( zone_type_UNLOAD_ALL, player_character.pos() ) ||
+             g->check_near_zone( zone_type_STRIP_CORPSES, player_character.pos() ) ? UnloadLoot : 0;
     if( g->check_near_zone( zone_type_FARM_PLOT, player_character.pos() ) ) {
         flags |= FertilizePlots;
         flags |= MultiFarmPlots;
@@ -1291,7 +1413,7 @@ static void loot()
     flags |= g->check_near_zone( zone_type_LOOT_CORPSE,
                                  player_character.pos() ) ? MultiButchery : 0;
     flags |= g->check_near_zone( zone_type_MINING, player_character.pos() ) ? MultiMining : 0;
-    flags |= g->check_near_zone( zone_type_zone_disassemble,
+    flags |= g->check_near_zone( zone_type_DISASSEMBLE,
                                  player_character.pos() ) ? MultiDis : 0;
     flags |= g->check_near_zone( zone_type_MOPPING, player_character.pos() ) ? MultiMopping : 0;
     if( flags == 0 ) {
@@ -1309,14 +1431,8 @@ static void loot()
     if( flags & SortLoot ) {
         menu.addentry_desc( SortLootStatic, true, 'o', _( "Sort out my loot (static zones only)" ),
                             _( "Sorts out the loot from Loot: Unsorted zone to nearby appropriate Loot zones ignoring personal zones.  Uses empty space in your inventory or utilizes a cart, if you are holding one." ) );
-    }
-
-    if( flags & SortLoot ) {
         menu.addentry_desc( SortLootPersonal, true, 'O', _( "Sort out my loot (personal zones only)" ),
                             _( "Sorts out the loot from Loot: Unsorted zone to nearby appropriate Loot zones ignoring static zones.  Uses empty space in your inventory or utilizes a cart, if you are holding one." ) );
-    }
-
-    if( flags & SortLoot ) {
         menu.addentry_desc( SortLoot, true, 'I', _( "Sort out my loot (all)" ),
                             _( "Sorts out the loot from Loot: Unsorted zone to nearby appropriate Loot zones.  Uses empty space in your inventory or utilizes a cart, if you are holding one." ) );
     }
@@ -1489,8 +1605,8 @@ static void read()
     if( loc ) {
         if( loc->type->can_use( "learn_spell" ) ) {
             item spell_book = *loc.get_item();
-            spell_book.get_use( "learn_spell" )->call( player_character, spell_book,
-                    spell_book.active, player_character.pos() );
+            spell_book.get_use( "learn_spell" )->call( &player_character, spell_book,
+                    player_character.pos() );
         } else {
             loc = loc.obtain( player_character );
             player_character.read( loc );
@@ -1723,12 +1839,16 @@ void game::open_consume_item_menu()
 
     avatar &player_character = get_avatar();
     switch( as_m.ret ) {
-        case 0:
-            avatar_action::eat( player_character, game_menus::inv::consume_food( player_character ) );
+        case 0: {
+            item_location loc = game_menus::inv::consume_food( player_character );
+            avatar_action::eat( player_character, loc );
             break;
-        case 1:
-            avatar_action::eat( player_character, game_menus::inv::consume_drink( player_character ) );
+        }
+        case 1: {
+            item_location loc = game_menus::inv::consume_drink( player_character );
+            avatar_action::eat( player_character, loc );
             break;
+        }
         case 2:
             avatar_action::eat_or_use( player_character, game_menus::inv::consume_meds( player_character ) );
             break;
@@ -1912,7 +2032,6 @@ static void do_deathcam_action( const action_id &act, avatar &player_character )
     }
 }
 
-
 static std::map<action_id, std::string> get_actions_disabled_in_shell()
 {
     return std::map<action_id, std::string> {
@@ -1926,6 +2045,7 @@ static std::map<action_id, std::string> get_actions_disabled_in_shell()
         { ACTION_PICKUP_ALL,         _( "You can't pick anything up while you're in your shell." ) },
         { ACTION_GRAB,               _( "You can't grab things while you're in your shell." ) },
         { ACTION_HAUL,               _( "You can't haul things while you're in your shell." ) },
+        { ACTION_HAUL_TOGGLE,        _( "You can't haul things while you're in your shell." ) },
         { ACTION_BUTCHER,            _( "You can't butcher while you're in your shell." ) },
         { ACTION_PEEK,               _( "You can't peek around corners while you're in your shell." ) },
         { ACTION_DROP,               _( "You can't drop things while you're in your shell." ) },
@@ -1947,6 +2067,7 @@ static const std::set<action_id> actions_disabled_in_incorporeal {
     ACTION_PICKUP_ALL,
     ACTION_GRAB,
     ACTION_HAUL,
+    ACTION_HAUL_TOGGLE,
     ACTION_BUTCHER,
     ACTION_CRAFT,
     ACTION_RECRAFT,
@@ -1967,6 +2088,7 @@ static std::map<action_id, std::string> get_actions_disabled_mounted()
         { ACTION_PICKUP_ALL,         _( "You can't pick anything up while you're riding." ) },
         { ACTION_GRAB,               _( "You can't grab things while you're riding." ) },
         { ACTION_HAUL,               _( "You can't haul things while you're riding." ) },
+        { ACTION_HAUL_TOGGLE,        _( "You can't haul things while you're riding." ) },
         { ACTION_BUTCHER,            _( "You can't butcher while you're riding." ) },
         { ACTION_PEEK,               _( "You can't peek around corners while you're riding." ) },
         { ACTION_CRAFT,              _( "You can't craft while you're riding." ) },
@@ -2120,7 +2242,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_MOVE_DOWN: {
             if( player_character.is_mounted() ) {
                 auto *mon = player_character.mounted_creature.get();
-                if( !mon->has_flag( MF_RIDEABLE_MECH ) ) {
+                if( !mon->has_flag( mon_flag_RIDEABLE_MECH ) ) {
                     add_msg( m_info, _( "You can't go down stairs while you're riding." ) );
                     break;
                 }
@@ -2169,7 +2291,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_MOVE_UP:
             if( player_character.is_mounted() ) {
                 auto *mon = player_character.mounted_creature.get();
-                if( !mon->has_flag( MF_RIDEABLE_MECH ) ) {
+                if( !mon->has_flag( mon_flag_RIDEABLE_MECH ) ) {
                     add_msg( m_info, _( "You can't go up stairs while you're riding." ) );
                     break;
                 }
@@ -2191,7 +2313,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
         case ACTION_CLOSE:
             if( player_character.is_mounted() ) {
                 auto *mon = player_character.mounted_creature.get();
-                if( !mon->has_flag( MF_RIDEABLE_MECH ) ) {
+                if( !mon->has_flag( mon_flag_RIDEABLE_MECH ) ) {
                     add_msg( m_info, _( "You can't close things while you're riding." ) );
                 }
             } else if( mouse_target ) {
@@ -2242,6 +2364,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
 
         case ACTION_HAUL:
             haul();
+            break;
+
+        case ACTION_HAUL_TOGGLE:
+            haul_toggle();
             break;
 
         case ACTION_BUTCHER:
@@ -2385,6 +2511,10 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                     }
                 }
             }
+            break;
+
+        case ACTION_INSERT_ITEM:
+            insert_item();
             break;
 
         case ACTION_UNLOAD_CONTAINER:

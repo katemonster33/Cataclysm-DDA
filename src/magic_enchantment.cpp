@@ -76,6 +76,7 @@ namespace io
             case enchant_vals::mod::PAIN: return "PAIN";
             case enchant_vals::mod::PAIN_REMOVE: return "PAIN_REMOVE";
             case enchant_vals::mod::MELEE_DAMAGE: return "MELEE_DAMAGE";
+            case enchant_vals::mod::RANGED_DAMAGE: return "RANGED_DAMAGE";
             case enchant_vals::mod::BONUS_BLOCK: return "BONUS_BLOCK";
             case enchant_vals::mod::BONUS_DODGE: return "BONUS_DODGE";
             case enchant_vals::mod::ATTACK_NOISE: return "ATTACK_NOISE";
@@ -84,6 +85,7 @@ namespace io
             case enchant_vals::mod::SIGHT_RANGE_ELECTRIC: return "SIGHT_RANGE_ELECTRIC";
             case enchant_vals::mod::MOTION_VISION_RANGE: return "MOTION_VISION_RANGE";
             case enchant_vals::mod::SIGHT_RANGE_NETHER: return "SIGHT_RANGE_NETHER";
+            case enchant_vals::mod::SIGHT_RANGE_MINDS: return "SIGHT_RANGE_MINDS";
             case enchant_vals::mod::CARRY_WEIGHT: return "CARRY_WEIGHT";
             case enchant_vals::mod::WEAPON_DISPERSION: return "WEAPON_DISPERSION";
             case enchant_vals::mod::SOCIAL_LIE: return "SOCIAL_LIE";
@@ -146,6 +148,8 @@ namespace io
             case enchant_vals::mod::FORCEFIELD: return "FORCEFIELD";
             case enchant_vals::mod::EVASION: return "EVASION";
             case enchant_vals::mod::OVERKILL_DAMAGE: return "OVERKILL_DAMAGE";
+            case enchant_vals::mod::RANGE: return "RANGE";
+            case enchant_vals::mod::AVOID_FRIENDRY_FIRE: return "AVOID_FRIENDRY_FIRE";
             case enchant_vals::mod::NUM_MOD: break;
         }
         cata_fatal( "Invalid enchant_vals::mod" );
@@ -524,7 +528,7 @@ bool enchant_cache::add( const enchant_cache &rhs )
 
 void enchant_cache::force_add( const enchant_cache &rhs )
 {
-    for( const std::pair<const enchant_vals::mod, int> &pair_values :
+    for( const std::pair<const enchant_vals::mod, double> &pair_values :
          rhs.values_add ) {
         values_add[pair_values.first] += pair_values.second;
     }
@@ -649,7 +653,7 @@ void enchant_cache::add_hit_you( const fake_spell &sp )
     hit_you_effect.push_back( sp );
 }
 
-int enchantment::get_value_add( const enchant_vals::mod value, const Character &guy ) const
+double enchantment::get_value_add( const enchant_vals::mod value, const Character &guy ) const
 {
     const auto found = values_add.find( value );
     if( found == values_add.cend() ) {
@@ -669,7 +673,7 @@ double enchantment::get_value_multiply( const enchant_vals::mod value, const Cha
     return found->second.evaluate( d );
 }
 
-int enchant_cache::get_value_add( const enchant_vals::mod value ) const
+double enchant_cache::get_value_add( const enchant_vals::mod value ) const
 {
     const auto found = values_add.find( value );
     if( found == values_add.cend() ) {
@@ -722,7 +726,7 @@ double enchant_cache::modify_value( const skill_id &mod_val, double value ) cons
 units::energy enchant_cache::modify_value( const enchant_vals::mod mod_val,
         units::energy value ) const
 {
-    value += units::from_millijoule<int>( get_value_add( mod_val ) );
+    value += units::from_millijoule<double>( get_value_add( mod_val ) );
     value *= 1.0 + get_value_multiply( mod_val );
     return value;
 }
@@ -730,7 +734,7 @@ units::energy enchant_cache::modify_value( const enchant_vals::mod mod_val,
 units::mass enchant_cache::modify_value( const enchant_vals::mod mod_val,
         units::mass value ) const
 {
-    value += units::from_gram<int>( get_value_add( mod_val ) );
+    value += units::from_gram<double>( get_value_add( mod_val ) );
     value *= 1.0 + get_value_multiply( mod_val );
     return value;
 }

@@ -26,12 +26,16 @@ files:
   'data/mods/Xedra_Evolved/**':
     - Maleclypse
     - GuardianDll
+  'data/mods/MindOverMatter/**':
+    - Standing-Storm
   'data/mods/innawood/**':
     - Light-Wave
   'data/mods/MA/**':
     - ZhilkinSerg
   'data/mods/No_Hope/**':
     - Night-Pryanik
+  'data/mods/Tamable_Wildlife/**':
+    - Termineitor244
 
   '**/.clang-tidy':
     - jbytheway
@@ -41,7 +45,6 @@ files:
     - KorGgenT
   'tools/{spell_checker/!(dictionary.txt){,/**},!(spell_checker){,/**}}':
     - jbytheway
-    - int-ua
   'src/widget.cpp':
     - wapcaplet
     - dseguin
@@ -50,3 +53,7 @@ files:
     - dseguin
   'src/ui_manager.*':
     - Qrox
+  'data/raw/keybindings{.json,/**}':
+    - Qrox
+  'src/math_parser*':
+    - andrei8l

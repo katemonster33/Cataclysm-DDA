@@ -31,7 +31,8 @@
       { "group": "NPC_starting_traits" },
       { "group": "Appearance_demographics" },
       { "trait": "NO_BASH" },
-      { "trait": "RETURN_TO_START_POS" }
+      { "trait": "RETURN_TO_START_POS" },
+      { "trait": "GETS_RANDOM_MISSION_NOMOVE" }
     ],
     "weapon_override": "NC_LUMBERJACK_tools",
     "bonus_str": { "rng": [ 1, 2 ] },
@@ -84,7 +85,7 @@
     "entries": [
       { "item": "ax", "prob": 70 },
       { "item": "saw", "prob": 10 },
-      { "item": "can_beans", "prob": 10 },
+      { "prob": 10, "group": "can_beans_can_medium_2" },
       { "item": "chainsaw_off", "prob": 10 }
     ]
   }

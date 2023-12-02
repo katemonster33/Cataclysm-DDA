@@ -29,12 +29,12 @@ struct mapgen_arguments {
     template <
         typename InputRange,
         std::enable_if_t <
-            std::is_same <
+            std::is_same_v <
                 typename InputRange::value_type, std::pair<std::string, cata_variant>
-                >::value ||
-            std::is_same <
+                > ||
+            std::is_same_v <
                 typename InputRange::value_type, std::pair<const std::string, cata_variant>
-                >::value
+                >
             > * = nullptr >
     explicit mapgen_arguments( const InputRange &map_ )
         : map( map_.begin(), map_.end() )
@@ -184,6 +184,9 @@ class mapgendata
         int zlevel() const {
             // TODO: should be able to determine this from the map itself
             return zlevel_;
+        }
+        std::vector<oter_id> get_predecessors() const {
+            return predecessors_;
         }
 
         void set_dir( int dir_in, int val );

@@ -80,7 +80,13 @@ static const itype_id itype_e_handcuffs( "e_handcuffs" );
 static const itype_id itype_mininuke_act( "mininuke_act" );
 static const itype_id itype_rm13_armor_on( "rm13_armor_on" );
 
+static const json_character_flag json_flag_EMP_IMMUNE( "EMP_IMMUNE" );
 static const json_character_flag json_flag_GLARE_RESIST( "GLARE_RESIST" );
+
+static const mon_flag_str_id mon_flag_ELECTRIC_FIELD( "ELECTRIC_FIELD" );
+static const mon_flag_str_id mon_flag_ELECTRONIC( "ELECTRONIC" );
+static const mon_flag_str_id mon_flag_HEARS( "HEARS" );
+static const mon_flag_str_id mon_flag_SEES( "SEES" );
 
 static const mongroup_id GROUP_NETHER( "GROUP_NETHER" );
 
@@ -410,6 +416,7 @@ static std::vector<tripoint> shrapnel( const Creature *source, const tripoint &s
     fragment_cloud initial_cloud = accumulate_fragment_cloud( obstacle_cache[src.x][src.y],
     { fragment_velocity, static_cast<float>( fragment_count ) }, 1 );
     visited_cache[src.x][src.y] = initial_cloud;
+    visited_cache[src.x][src.y].density = static_cast<float>( fragment_count );
 
     castLightAll<fragment_cloud, fragment_cloud, shrapnel_calc, shrapnel_check,
                  update_fragment_cloud, accumulate_fragment_cloud>
@@ -582,10 +589,10 @@ void flashbang( const tripoint &p, bool player_immune )
             if( dist <= 4 ) {
                 critter.add_effect( effect_stunned, time_duration::from_turns( 10 - dist ) );
             }
-            if( critter.has_flag( MF_SEES ) && here.sees( critter.pos(), p, 8 ) ) {
+            if( critter.has_flag( mon_flag_SEES ) && here.sees( critter.pos(), p, 8 ) ) {
                 critter.add_effect( effect_blind, time_duration::from_turns( 18 - dist ) );
             }
-            if( critter.has_flag( MF_HEARS ) ) {
+            if( critter.has_flag( mon_flag_HEARS ) ) {
                 critter.add_effect( effect_deaf, time_duration::from_turns( 60 - dist * 4 ) );
             }
         }
@@ -634,7 +641,7 @@ void scrambler_blast( const tripoint &p )
 {
     if( monster *const mon_ptr = get_creature_tracker().creature_at<monster>( p ) ) {
         monster &critter = *mon_ptr;
-        if( critter.has_flag( MF_ELECTRONIC ) ) {
+        if( critter.has_flag( mon_flag_ELECTRONIC ) ) {
             critter.make_friendly();
         }
         add_msg( m_warning, _( "The %s sparks and begins searching for a target!" ),
@@ -684,7 +691,7 @@ void emp_blast( const tripoint &p )
     }
     if( monster *const mon_ptr = get_creature_tracker().creature_at<monster>( p ) ) {
         monster &critter = *mon_ptr;
-        if( critter.has_flag( MF_ELECTRONIC ) ) {
+        if( critter.has_flag( mon_flag_ELECTRONIC ) ) {
             int deact_chance = 0;
             const itype_id mon_item_id = critter.type->revert_to_itype;
             switch( critter.get_size() ) {
@@ -721,7 +728,7 @@ void emp_blast( const tripoint &p )
                     critter.make_friendly();
                 }
             }
-        } else if( critter.has_flag( MF_ELECTRIC_FIELD ) ) {
+        } else if( critter.has_flag( mon_flag_ELECTRIC_FIELD ) ) {
             if( !critter.has_effect( effect_emp ) ) {
                 if( sight ) {
                     add_msg( m_good, _( "The %s's electrical field momentarily goes out!" ), critter.name() );
@@ -744,7 +751,8 @@ void emp_blast( const tripoint &p )
     }
     if( player_character.posx() == p.x && player_character.posy() == p.y &&
         player_character.posz() == p.z ) {
-        if( player_character.get_power_level() > 0_kJ ) {
+        if( player_character.get_power_level() > 0_kJ &&
+            !player_character.has_flag( json_flag_EMP_IMMUNE ) ) {
             add_msg( m_bad, _( "The EMP blast drains your power." ) );
             int max_drain = ( player_character.get_power_level() > 1000_kJ ? 1000 : units::to_kilojoule(
                                   player_character.get_power_level() ) );
@@ -764,7 +772,8 @@ void emp_blast( const tripoint &p )
         for( item_location &it : player_character.all_items_loc() ) {
             // Render any electronic stuff in player's possession non-functional
             if( it->has_flag( flag_ELECTRONIC ) && !it->is_broken() &&
-                get_option<bool>( "EMP_DISABLE_ELECTRONICS" ) ) {
+                get_option<bool>( "EMP_DISABLE_ELECTRONICS" ) &&
+                !player_character.has_flag( json_flag_EMP_IMMUNE ) ) {
                 add_msg( m_bad, _( "The EMP blast fries your %s!" ), it->tname() );
                 it->deactivate();
                 it->set_flag( flag_ITEM_BROKEN );
