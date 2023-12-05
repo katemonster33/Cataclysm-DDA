@@ -65,6 +65,7 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
         text_align alignment, float max_width, bool *is_selected )
 {
     ImGui::PushID( text.c_str() );
+    ImGuiID itemId = GImGui->CurrentWindow->IDStack.back();
     ImGui::PushTextWrapPos( max_width );
     const auto color_segments = split_by_color( text );
     std::stack<nc_color> color_stack;
@@ -123,6 +124,7 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
     }
 
     ImGui::PopTextWrapPos();
+    GImGui->LastItemData.ID = itemId;
     ImGui::PopID();
 }
 
