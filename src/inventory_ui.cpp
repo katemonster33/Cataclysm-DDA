@@ -2536,8 +2536,6 @@ bool inventory_selector::has_available_choices() const
 
 inventory_input inventory_selector::get_input()
 {
-    mouse_hovered_entry = nullptr;
-    keyboard_focused_entry = nullptr;
     std::string const &action = ctxt.handle_input();
     int const ch = ctxt.get_raw_input().get_first_input();
     return process_input( action, ch );
