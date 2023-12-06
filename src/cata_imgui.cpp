@@ -58,7 +58,7 @@ void cataimgui::window::draw_colored_text( std::string const &text, const nc_col
         text_align alignment, float max_width, bool *is_selected, bool *is_focused, bool *is_hovered )
 {
     nc_color color_cpy = color;
-    draw_colored_text( text, color_cpy, alignment, max_width, is_selected );
+    draw_colored_text( text, color_cpy, alignment, max_width, is_selected, is_focused, is_hovered );
 }
 
 void cataimgui::window::draw_colored_text( std::string const &text, nc_color &color,
