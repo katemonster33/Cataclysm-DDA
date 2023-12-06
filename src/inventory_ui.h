@@ -901,15 +901,15 @@ class inventory_multiselector : public inventory_selector
     public:
         using GetStats = std::function<stats( const std::vector<std::pair<item_location, int>> )>;
         explicit inventory_multiselector( Character &p,
-                                 const inventory_selector_preset &preset = default_preset,
-                                 const std::string &selection_column_title = "",
-                                 const GetStats & = {},
-                                 bool allow_select_contained = false );
-        inventory_multiselector( cataimgui::window *parent, Character &p,
                                           const inventory_selector_preset &preset = default_preset,
                                           const std::string &selection_column_title = "",
                                           const GetStats & = {},
                                           bool allow_select_contained = false );
+        inventory_multiselector( cataimgui::window *parent, Character &p,
+                                 const inventory_selector_preset &preset = default_preset,
+                                 const std::string &selection_column_title = "",
+                                 const GetStats & = {},
+                                 bool allow_select_contained = false );
         drop_locations execute( bool allow_empty = false );
         void toggle_entry( inventory_entry &entry, size_t count );
     protected:
