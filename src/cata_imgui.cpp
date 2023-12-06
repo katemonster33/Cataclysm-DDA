@@ -55,14 +55,14 @@ RGBTuple color_loader<RGBTuple>::from_rgb( const int r, const int g, const int b
 #endif
 
 void cataimgui::window::draw_colored_text( std::string const &text, const nc_color &color,
-        text_align alignment, float max_width, bool *is_selected )
+        text_align alignment, float max_width, bool *is_selected, bool *is_focused, bool *is_hovered )
 {
     nc_color color_cpy = color;
     draw_colored_text( text, color_cpy, alignment, max_width, is_selected );
 }
 
 void cataimgui::window::draw_colored_text( std::string const &text, nc_color &color,
-        text_align alignment, float max_width, bool *is_selected )
+        text_align alignment, float max_width, bool *is_selected, bool *is_focused, bool *is_hovered )
 {
     ImGui::PushID( text.c_str() );
     ImGuiID itemId = GImGui->CurrentWindow->IDStack.back();
@@ -121,10 +121,17 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
                               static_cast<float>( c.b / 255. ), static_cast<float>( c.a / 255. ) },
                             "%s", seg.c_str() );
 #endif
+        GImGui->LastItemData.ID = itemId;
+        if( is_focused && !*is_focused ) {
+            *is_focused = ImGui::IsItemFocused();
+        }
+        if( is_hovered && !*is_hovered ) {
+            *is_hovered = ImGui::IsItemHovered( ImGuiHoveredFlags_NoNavOverride );
+        }
+
     }
 
     ImGui::PopTextWrapPos();
-    GImGui->LastItemData.ID = itemId;
     ImGui::PopID();
 }
 
@@ -595,7 +602,7 @@ void cataimgui::string_input_box::draw_controls()
 }
 
 
-cataimgui::list_selector::list_selector( std::string id ) : cataimgui::popup( id, true )
+cataimgui::list_selector::list_selector( const std::string &id ) : cataimgui::popup( id, true )
 {
 }
 

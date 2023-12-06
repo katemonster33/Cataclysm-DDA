@@ -1026,7 +1026,7 @@ void inventory_column::_get_entries( get_entries_t *res, entries_t const &ent,
 
 void inventory_selector::refresh_active_column()
 {
-    if( active_column_index != SIZE_MAX && columns[active_column_index]->activatable() ) {
+    if( active_column_index != SIZE_MAX && !columns[active_column_index]->activatable() ) {
         toggle_active_column( scroll_direction::FORWARD );
     }
 }
@@ -1551,6 +1551,13 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column )
 
                 ImGui::SetCursorPos( { current_xpos, orig_cpos.y } );
                 draw_colored_text( cache.text[index], c_light_gray );
+                if( ImGui::IsItemFocused() ) {
+                    keyboard_focused_entry = &entry;
+                    ent = entry;
+                }
+                if( ImGui::IsItemHovered( ImGuiHoveredFlags_NoNavOverride ) ) {
+                    mouse_hovered_entry = &entry;
+                }
                 text_width = current_xpos - orig_cpos.x;
             }
             ImGui::SetCursorPos( orig_cpos );
@@ -1589,6 +1596,10 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column )
         if( drag_enabled && selectable != nullptr ) {
             // this empty object allows the drag-drop logic to work, without this it crashes and burns.
             ImGui::Selectable( "", selectable );
+            if( ImGui::IsItemFocused() ) {
+                keyboard_focused_entry = &entry;
+                ent = entry;
+            }
             ImGui::SameLine( 0, 0 );
             if( ImGui::BeginDragDropSource() ) {
                 ImGui::SetDragDropPayload( "INVENTORY_ENTRY", &entry, sizeof( inventory_entry ) );
@@ -1606,12 +1617,14 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column )
                 }
             }
         }
-        draw_colored_text( text, color, cataimgui::text_align::Left, text_width, selectable );
-        if( ImGui::IsItemFocused() ) {
+        bool focused = false, hovered = false;
+        draw_colored_text( text, color, cataimgui::text_align::Left, text_width, selectable, &focused,
+                           &hovered );
+        if( focused ) {
             keyboard_focused_entry = &entry;
             ent = entry;
         }
-        if( ImGui::IsItemHovered( ImGuiHoveredFlags_NoNavOverride ) ) {
+        if( hovered ) {
             mouse_hovered_entry = &entry;
         }
 
@@ -2433,6 +2446,7 @@ inventory_selector::inventory_selector( cataimgui::window *parent, Character &u,
     ctxt.register_action( "CATEGORY_SELECTION", to_translation( "Switch category selection mode" ) );
     ctxt.register_action( "TOGGLE_FAVORITE", to_translation( "Toggle favorite" ) );
     ctxt.register_action( "SELECT" );
+    ctxt.register_action( "NEXT_COLUMN" );
     ctxt.register_action( "HELP_KEYBINDINGS" );
     ctxt.register_action( "VIEW_CATEGORY_MODE" );
     ctxt.register_action( "TOGGLE_NUMPAD_NAVIGATION" );
@@ -2482,6 +2496,7 @@ inventory_selector::inventory_selector( Character &u, const inventory_selector_p
     ctxt.register_action( "CATEGORY_SELECTION", to_translation( "Switch category selection mode" ) );
     ctxt.register_action( "TOGGLE_FAVORITE", to_translation( "Toggle favorite" ) );
     ctxt.register_action( "SELECT" );
+    ctxt.register_action( "NEXT_COLUMN" );
     ctxt.register_action( "HELP_KEYBINDINGS" );
     ctxt.register_action( "VIEW_CATEGORY_MODE" );
     ctxt.register_action( "TOGGLE_NUMPAD_NAVIGATION" );
@@ -2618,6 +2633,9 @@ void inventory_selector::on_input( const inventory_input &input )
         //ui.lock()->mark_resize();
     } else if( input.action == "TOGGLE_SKIP_UNSELECTABLE" ) {
         toggle_skip_unselectable();
+    } else if( input.action == "NEXT_COLUMN" ) {
+        toggle_active_column( scroll_direction::FORWARD );
+        highlight_first_item( *columns[active_column_index] );
     } else {
         for( inventory_column *elem : columns ) {
             elem->on_input( input );
@@ -2850,10 +2868,24 @@ std::string inventory_selector::action_bound_to_key( char key ) const
     return ctxt.input_to_action( input_event( key, input_event_t::keyboard_char ) );
 }
 
+void inventory_selector::highlight_first_item( inventory_column &col )
+{
+    for( inventory_entry &entry : col.entries ) {
+        if( entry.is_item() ) {
+            highlight( entry.any_item() );
+            break;
+        }
+    }
+}
+
 item_location inventory_pick_selector::execute()
 {
+
     for( inventory_column *col : columns ) {
         col->prepare_paging();
+    }
+    if( !columns.empty() ) {
+        highlight_first_item( *columns[0] );
     }
     debug_print_timer( tp_start );
     item_location startDragItem;
@@ -3172,6 +3204,9 @@ drop_locations inventory_multiselector::execute( bool allow_empty )
     for( inventory_column *col : columns ) {
         col->prepare_paging();
     }
+    if( !columns.empty() ) {
+        highlight_first_item( *columns[0] );
+    }
     debug_print_timer( tp_start );
     while( true ) {
         ui_manager::redraw();
@@ -3208,6 +3243,9 @@ std::pair<const item *, const item *> inventory_compare_selector::execute()
 {
     for( inventory_column *col : columns ) {
         col->prepare_paging();
+    }
+    if( !columns.empty() ) {
+        highlight_first_item( *columns[0] );
     }
     debug_print_timer( tp_start );
     while( true ) {
@@ -3473,6 +3511,9 @@ drop_locations inventory_drop_selector::execute()
     for( inventory_column *col : columns ) {
         col->prepare_paging();
     }
+    if( !columns.empty() ) {
+        highlight_first_item( *columns[0] );
+    }
     debug_print_timer( tp_start );
     while( true ) {
         ui_manager::redraw();
@@ -3664,6 +3705,9 @@ drop_locations pickup_selector::execute()
 {
     for( inventory_column *col : columns ) {
         col->prepare_paging();
+    }
+    if( !columns.empty() ) {
+        highlight_first_item( *columns[0] );
     }
     debug_print_timer( tp_start );
 
@@ -3861,6 +3905,9 @@ int inventory_examiner::execute()
     for( inventory_column *col : columns ) {
         col->prepare_paging();
     }
+    if( !columns.empty() ) {
+        highlight_first_item( *columns[0] );
+    }
 
     // pass 0 into this to ensure we get 1 column
     rearrange_columns( 0 );
@@ -3964,6 +4011,9 @@ std::string unload_selector::hint_string()
 
 std::pair<item_location, bool> unload_selector::execute()
 {
+    if( !columns.empty() ) {
+        highlight_first_item( *columns[0] );
+    }
     item_location startDragItem;
     bool dragActive = false;
     while( true ) {
