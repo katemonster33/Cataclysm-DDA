@@ -56,9 +56,11 @@ class window
         explicit window( const std::string &title, int window_flags = 0 );
         virtual ~window();
         void draw_colored_text( std::string const &text, const nc_color &color,
-                                text_align alignment = text_align::Left, float max_width = 0.0F, bool *is_selected = nullptr );
+                                text_align alignment = text_align::Left, float max_width = 0.0F, bool *is_selected = nullptr,
+                                bool *is_focused = nullptr, bool *is_hovered = nullptr );
         void draw_colored_text( std::string const &text, nc_color &color,
-                                text_align alignment = text_align::Left, float max_width = 0.0F, bool *is_selected = nullptr );
+                                text_align alignment = text_align::Left, float max_width = 0.0F, bool *is_selected = nullptr,
+                                bool *is_focused = nullptr, bool *is_hovered = nullptr );
         bool action_button( const std::string &action, const std::string &text );
         void draw_header( std::string const &text );
         bool get_is_open() const;
@@ -144,7 +146,7 @@ class list_selector : public popup
             bool is_selected;
         };
 
-        explicit list_selector( std::string id );
+        explicit list_selector( const std::string &id );
         void add( const litem &it );
         void add( std::initializer_list<litem> &items );
         int get_selected_index() const;
