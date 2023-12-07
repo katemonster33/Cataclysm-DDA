@@ -862,6 +862,7 @@ class inventory_selector : public cataimgui::window
         static inventory_entry *mouse_hovered_entry;
         static inventory_entry *keyboard_focused_entry;
         static const item_location *entry_to_be_focused;
+        static bool chevron_hovered;
 };
 
 template <>
