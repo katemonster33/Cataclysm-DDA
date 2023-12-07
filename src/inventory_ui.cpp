@@ -67,6 +67,7 @@ static const item_category_id item_category_INTEGRATED( "INTEGRATED" );
 static const item_category_id item_category_ITEMS_WORN( "ITEMS_WORN" );
 static const item_category_id item_category_WEAPON_HELD( "WEAPON_HELD" );
 
+bool chevron_hovered = false;
 inventory_entry *inventory_selector::mouse_hovered_entry = nullptr;
 inventory_entry *inventory_selector::keyboard_focused_entry = nullptr;
 const item_location *inventory_selector::entry_to_be_focused = nullptr;
@@ -1515,6 +1516,15 @@ class pocket_selector : public cataimgui::list_selector
 
 inventory_entry &inventory_selector::draw_column( inventory_column *column )
 {
+    bool any_chevron = std::any_of( column->entries.begin(),
+    column->entries.end(), []( inventory_entry & ent ) {
+        return ent.chevron;
+    } );
+    bool any_invlet = std::any_of( column->entries.begin(),
+    column->entries.end(), []( inventory_entry & ent ) {
+        return ent.get_invlet();
+    } );
+
     const std::string &hl_option = get_option<std::string>( "INVENTORY_HIGHLIGHT" );
     static inventory_entry dummy( nullptr );
     inventory_entry &ent = dummy;
@@ -1527,8 +1537,15 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column )
             bool const hide_override = column->hide_entries_override && entry.any_item()->is_container();
             bool const stat = entry.is_collation_entry() ||
                               !hide_override ? entry.collapsed : *column->hide_entries_override;
-            ImGui::Text( "%s", stat ? "▶" : "▼" );
+            ImGui::Text( stat ? "▶" : "▼" );
+            if( ImGui::IsItemHovered() ) {
+                chevron_hovered = true;
+                mouse_hovered_entry = &entry;
+            }
             ImGui::SameLine();
+        } else if( any_chevron ) {
+            ImGui::Text( "  " );
+            ImGui::SameLine( 0, 0 );
         }
         bool tmp_selected = entry.chosen_count > 0;
         if( entry.get_invlet() ) {
@@ -1538,6 +1555,9 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column )
             ImGui::SameLine( 0, 0 );
             ImGui::Text( "%c", ']' );
             ImGui::SameLine();
+        } else if( any_invlet ) {
+            ImGui::Text( "   " );
+            ImGui::SameLine( 0, 0 );
         }
         float text_width = ImGui::GetContentRegionAvail().x;
         if( !cache.text.empty() ) {
@@ -2650,6 +2670,12 @@ void inventory_selector::on_input( const inventory_input &input )
                 col->cycle_hide_override();
             }
         }
+        if( input.action == "SHOW_HIDE_CONTENTS" && keyboard_focused_entry != nullptr ) {
+            bool new_collapsed_val = !keyboard_focused_entry->collapsed;
+            for( inventory_column *col : columns ) {
+                col->set_collapsed( *keyboard_focused_entry, new_collapsed_val );
+            }
+        }
         if( input.action == "SHOW_HIDE_CONTENTS" || input.action == "SHOW_HIDE_CONTENTS_ALL" ) {
             for( inventory_column * const &col : columns ) {
                 col->invalidate_paging();
@@ -2900,7 +2926,15 @@ item_location inventory_pick_selector::execute()
         } else if( input.action == "SELECT" ) {
             if( mouse_hovered_entry != nullptr && mouse_hovered_entry->is_item() &&
                 !cataimgui::is_drag_drop_active() ) {
-                return mouse_hovered_entry->any_item();
+                if( chevron_hovered ) {
+                    bool new_collapsed_val = !mouse_hovered_entry->collapsed;
+                    for( inventory_column *col : columns ) {
+                        col->set_collapsed( *mouse_hovered_entry, new_collapsed_val );
+                        col->invalidate_paging();
+                    }
+                } else {
+                    return mouse_hovered_entry->any_item();
+                }
             } else {
                 on_input( input );
             }
@@ -4085,6 +4119,9 @@ cataimgui::bounds inventory_selector::get_bounds()
 
 void inventory_selector::draw_controls()
 {
+    mouse_hovered_entry = nullptr;
+    keyboard_focused_entry = nullptr;
+    chevron_hovered = false;
     int old_x_pos = ImGui::GetCursorPosX();
     ImGui::Text( "%s", remove_color_tags( hint ).c_str() );
     ImGui::SameLine();
