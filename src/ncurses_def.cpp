@@ -313,10 +313,6 @@ void catacurses::init_interface()
     if( !newscr ) {
         throw std::runtime_error( "null newscr" );
     }
-#if !defined(__CYGWIN__)
-    // ncurses mouse registration
-    mousemask( ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, nullptr );
-#endif
     // our curses wrapper does not support changing this behavior, ncurses must
     // behave exactly like the wrapper, therefore:
     noecho();  // Don't echo keypresses
@@ -326,6 +322,21 @@ void catacurses::init_interface()
     // TODO: error checking
     start_color();
     init_colors();
+    cataimgui::load_colors();
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+
+    imtui_screen = ImTui_ImplNcurses_Init();
+    ImTui_ImplText_Init();
+
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+#if !defined(__CYGWIN__)
+    // ncurses mouse registration
+    mouseinterval( 0 );
+    mousemask( ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, nullptr );
+    printf( "\033[?1003h\n" );
+#endif
 }
 
 bool catacurses::supports_256_colors()
