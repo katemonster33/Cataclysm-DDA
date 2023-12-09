@@ -115,7 +115,7 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
         ImGui::TextColored( { static_cast<float>( rgbCol.Red / 255. ), static_cast<float>( rgbCol.Green / 255. ),
                               static_cast<float>( rgbCol.Blue / 255. ), static_cast<float>( 255. ) },
                             "%s", seg.c_str() );
-        GImGui->CurrentWindow->DC.LastItemId = itemId;
+        GImGui->LastItemData.ID = itemId;
 #else
         SDL_Color c = curses_color_to_SDL( color );
         ImGui::TextColored( { static_cast<float>( c.r / 255. ), static_cast<float>( c.g / 255. ),
