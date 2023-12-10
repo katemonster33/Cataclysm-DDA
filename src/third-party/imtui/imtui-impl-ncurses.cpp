@@ -3,7 +3,7 @@
  */
 
 #include "imtui.h"
-#include "imgui_internal.h"
+#include "imgui/imgui_internal.h"
 #include "imtui-impl-ncurses.h"
 
 #ifdef _WIN32

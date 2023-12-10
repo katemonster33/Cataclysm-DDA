@@ -5,9 +5,9 @@
 #include "color.h"
 #include "input.h"
 #include <type_traits>
+#include <imgui/imgui.h>
+#include <imgui/imgui_internal.h>
 #if !(defined(TILES) || defined(WIN32))
-#include <imtui/imgui.h>
-#include <imtui/imgui_internal.h>
 #include "color_loader.h"
 
 struct RGBTuple {
@@ -49,8 +49,6 @@ RGBTuple color_loader<RGBTuple>::from_rgb( const int r, const int g, const int b
     return result;
 }
 #else
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
 #include "sdl_utils.h"
 #endif
 

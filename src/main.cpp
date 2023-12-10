@@ -60,7 +60,6 @@
 #endif
 
 #if !(defined(TILES) || defined(_WIN32))
-#include "imtui/imgui.h"
 #include "imtui/imtui-impl-ncurses.h"
 #include "imtui/imtui-impl-text.h"
 #endif

@@ -15,7 +15,7 @@
 #include "sdltiles.h" // IWYU pragma: keep
 
 #if !(defined(TILES) || defined(_WIN32))
-#include "imtui/imgui.h"
+#include "imgui/imgui.h"
 #include "imtui/imtui-impl-ncurses.h"
 #include "imtui/imtui-impl-text.h"
 #endif

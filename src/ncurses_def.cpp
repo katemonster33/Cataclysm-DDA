@@ -6,7 +6,7 @@
 #include "point.h"
 #include "translations.h"
 #include "imtui/imtui-impl-ncurses.h"
-#include "imtui/imgui.h"
+#include "imgui/imgui.h"
 #include "imtui/imtui-impl-text.h"
 #include "cata_imgui.h"
 
