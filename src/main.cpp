@@ -59,6 +59,11 @@
 #   include <unistd.h> // getpid()
 #endif
 
+#if !(defined(TILES) || defined(_WIN32))
+#include "imtui/imtui-impl-ncurses.h"
+#include "imtui/imtui-impl-text.h"
+#endif
+
 #if defined(PREFIX)
 #   undef PREFIX
 #   include "prefix.h"

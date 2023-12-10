@@ -5,6 +5,10 @@
 #include "input.h"
 #include "point.h"
 #include "translations.h"
+#include "imtui/imtui-impl-ncurses.h"
+#include "imgui/imgui.h"
+#include "imtui/imtui-impl-text.h"
+#include "cata_imgui.h"
 
 // ncurses can define some functions as macros, but we need those identifiers
 // to be unchanged by the preprocessor, as we use them as function names.

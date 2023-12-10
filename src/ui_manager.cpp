@@ -14,6 +14,12 @@
 #include "point.h"
 #include "sdltiles.h" // IWYU pragma: keep
 
+#if !(defined(TILES) || defined(_WIN32))
+#include "imgui/imgui.h"
+#include "imtui/imtui-impl-ncurses.h"
+#include "imtui/imtui-impl-text.h"
+#endif
+
 using ui_stack_t = std::vector<std::reference_wrapper<ui_adaptor>>;
 
 static bool redraw_in_progress = false;
