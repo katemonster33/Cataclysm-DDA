@@ -1620,6 +1620,9 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column )
                 keyboard_focused_entry = &entry;
                 ent = entry;
             }
+            if( ImGui::IsItemHovered( ImGuiHoveredFlags_NoNavOverride ) ) {
+                mouse_hovered_entry = &entry;
+            }
             ImGui::SameLine( 0, 0 );
             if( ImGui::BeginDragDropSource() ) {
                 ImGui::SetDragDropPayload( "INVENTORY_ENTRY", &entry, sizeof( inventory_entry ) );
