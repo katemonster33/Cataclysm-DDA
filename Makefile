@@ -896,17 +896,13 @@ else
 	OBJS = $(sort $(patsubst %,$(ODIR)/%,$(_OBJS)))
 endif
 
-ifeq ($(SDL), 1)
-  IMGUI_DIR = src/third-party/imgui
-else 
-  IMGUI_DIR = src/third-party/imtui
-endif
-IMGUI_SOURCES = $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
+IMGUI_SOURCES = src/third-party/imgui/imgui.cpp src/third-party/imgui/imgui_demo.cpp src/third-party/imgui/imgui_draw.cpp src/third-party/imgui/imgui_tables.cpp src/third-party/imgui/imgui_widgets.cpp
 
 ifeq ($(SDL), 1)
-	IMGUI_SOURCES += $(IMGUI_DIR)/imgui_impl_sdl2.cpp $(IMGUI_DIR)/imgui_impl_sdlrenderer.cpp
+	IMGUI_SOURCES += src/third-party/imgui/imgui_impl_sdl2.cpp src/third-party/imgui/imgui_impl_sdlrenderer.cpp
 else 
-	IMGUI_SOURCES += $(IMGUI_DIR)/imtui-impl-ncurses.cpp $(IMGUI_DIR)/imtui-impl-text.cpp
+	IMGUI_SOURCES += src/third-party/imtui/imtui-impl-ncurses.cpp src/third-party/imtui/imtui-impl-text.cpp
+  OTHERS += -DIMTUI
 endif
 
 IMGUI_OBJS = $(IMGUI_SOURCES:.cpp=.o)
