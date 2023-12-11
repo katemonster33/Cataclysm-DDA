@@ -64,14 +64,23 @@ target_link_libraries(
 
 # ImGUI
 if (TILES)
-        file(GLOB IMGUI_HEADERS ${THIRD_PARTY_SOURCE_DIR}/imgui/*.h)
-        file(GLOB IMGUI_SOURCES ${THIRD_PARTY_SOURCE_DIR}/imgui/*.cpp)
-
         add_library(
                 imgui
                 STATIC
-                ${IMGUI_HEADERS}
-                ${IMGUI_SOURCES}
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imconfig.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_internal.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imstb_rectpack.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imstb_textedit.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imstb_truetype.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_draw.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_tables.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_widgets.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_impl_sdl2.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_impl_sdl2.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_impl_sdlrenderer.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_impl_sdlrenderer.h
                 )
 
         target_include_directories(
@@ -91,6 +100,15 @@ if (TILES)
         target_compile_options(
                 imgui
                 PRIVATE
+                -Wno-missing-declarations
+                -Wno-error=missing-declarations
+                -Wno-error=suggest-attribute=noreturn
+                -Wno-suggest-attribute=noreturn
+                -Wno-unused-variable
+                -Wno-error=unused-variable
+                -Wno-format
+                -Wno-error=format=
+                -Wno-error=unused-parameter
                 -Wno-format
                 -Wno-old-style-cast
                 -Wno-unused-macros
@@ -106,14 +124,24 @@ endif ()
 
 # ImTUI
 if (CURSES)
-        file(GLOB IMTUI_HEADERS ${THIRD_PARTY_SOURCE_DIR}/imtui/*.h)
-        file(GLOB IMTUI_SOURCES ${THIRD_PARTY_SOURCE_DIR}/imtui/*.cpp)
-
         add_library(
                 imtui
                 STATIC
-                ${IMTUI_HEADERS}
-                ${IMTUI_SOURCES}
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imconfig.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_internal.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imstb_rectpack.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imstb_textedit.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imstb_truetype.h
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_draw.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_tables.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui_widgets.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imgui/imgui.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imtui/imtui-impl-ncurses.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imtui/imtui-impl-ncurses.h
+                ${THIRD_PARTY_SOURCE_DIR}/imtui/imtui-impl-text.cpp
+                ${THIRD_PARTY_SOURCE_DIR}/imtui/imtui-impl-text.h
+                ${THIRD_PARTY_SOURCE_DIR}/imtui/imtui.h
                 )
 
         target_include_directories(
@@ -127,9 +155,17 @@ if (CURSES)
                 imtui
                 PRIVATE
                 -Wno-missing-declarations
+                -Wno-error=missing-declarations
+                -Wno-error=suggest-attribute=noreturn
+                -Wno-suggest-attribute=noreturn
+                -Wno-unused-variable
+                -Wno-error=unused-variable
+                -Wno-format
+                -Wno-error=format=
+                -Wno-error=unused-parameter
+                -Wno-format
                 -Wno-old-style-cast
                 -Wno-unused-macros
-                -Wno-unused-variable
                 -Wno-zero-as-null-pointer-constant
                 )
 
