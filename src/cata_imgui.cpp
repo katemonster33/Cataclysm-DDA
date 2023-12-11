@@ -457,6 +457,11 @@ void cataimgui::popup::set_draw_callback( const std::function<bool()> &callback 
 void cataimgui::popup::draw()
 {
     ImGui::PushOverrideID( popup_id );
+#if defined(TILES) || defined(WIN32)
+    ImGui::SetNextWindowSize( { 400, 0 } );
+#else
+    ImGui::SetNextWindowSize( { 50, 0 } );
+#endif
     if( is_modal ) {
         if( ImGui::BeginPopupModal( id.c_str(), &is_open, ImGuiWindowFlags_AlwaysAutoResize ) ) {
             draw_controls();
