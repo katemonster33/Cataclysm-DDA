@@ -62,6 +62,14 @@
   },
   {
     "type": "effect_on_condition",
+    "id": "EOC_PSIONICS_PSI_NEUTRALIZED_ENDS_ALL_POWERS",
+    "eoc_type": "EVENT",
+    "required_event": "character_gains_effect",
+    "condition": { "compare_string": [ "effect_psi_neutralized", { "context_val": "effect" } ] },
+    "effect": [ { "run_eocs": [ "EOC_END_PSI_POWERS" ] } ]
+  },
+  {
+    "type": "effect_on_condition",
     "id": "EOC_PSIONICS_BROKEN_LIMB_ENDS_POWERS",
     "eoc_type": "EVENT",
     "required_event": "broken_bone",
@@ -87,7 +95,12 @@
     "required_event": "character_gains_effect",
     "condition": {
       "and": [
-        { "compare_string": [ "stunned", { "context_val": "effect" } ] },
+        {
+          "or": [
+            { "compare_string": [ "stunned", { "context_val": "effect" } ] },
+            { "compare_string": [ "psi_stunned", { "context_val": "effect" } ] }
+          ]
+        },
         {
           "or": [
             { "u_has_effect": "effect_biokin_overcome_pain" },
@@ -201,7 +214,10 @@
             { "compare_string": [ "weed_high", { "context_val": "effect" } ] },
             { "compare_string": [ "high", { "context_val": "effect" } ] },
             { "compare_string": [ "drunk", { "context_val": "effect" } ] },
-            { "compare_string": [ "zapped", { "context_val": "effect" } ] }
+            { "compare_string": [ "zapped", { "context_val": "effect" } ] },
+            { "compare_string": [ "effect_psi_reduced_breathing", { "context_val": "effect" } ] },
+            { "compare_string": [ "effect_psi_null", { "context_val": "effect" } ] },
+            { "compare_string": [ "effect_psi_null_unbound", { "context_val": "effect" } ] }
           ]
         },
         {
@@ -230,5 +246,47 @@
       ]
     },
     "effect": [ { "run_eocs": [ "EOC_POWER_MAINTENANCE_CONCENTRATION_CHECK" ] } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_MINDOVERMATTER_PRE_COLD_TO_COLD",
+    "//": "duration is one day to 14 days",
+    "condition": { "u_has_effect": "pre_cold" },
+    "effect": [ { "u_lose_effect": "pre_cold" }, { "u_add_effect": "cold", "duration": { "math": [ "rng(86400,1209600)" ] } } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_MINDOVERMATTER_PRE_FLU_TO_FLU",
+    "//": "duration is 3 days to 10 days",
+    "condition": { "u_has_effect": "pre_flu" },
+    "effect": [ { "u_lose_effect": "pre_flu" }, { "u_add_effect": "flu", "duration": { "math": [ "rng(259200,864000)" ] } } ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_MINDOVERMATTER_PRE_CONJUNCTIVITIS_VIRAL_TO_CONJUNCTIVITIS_VIRAL",
+    "condition": { "u_has_effect": "pre_conjunctivitis_viral" },
+    "effect": [
+      { "u_lose_effect": "pre_conjunctivitis_viral" },
+      { "u_lose_effect": "pre_conjunctivitis_bacterial" },
+      {
+        "u_add_effect": "conjunctivitis_viral",
+        "duration": { "math": [ "rand(259200) + 432000" ] },
+        "target_part": "eyes"
+      }
+    ]
+  },
+  {
+    "type": "effect_on_condition",
+    "id": "EOC_MINDOVERMATTER_PRE_CONJUNCTIVITIS_BACTERIAL_TO_CONJUNCTIVITIS_BACTERIAL",
+    "condition": { "u_has_effect": "pre_conjunctivitis_bacterial" },
+    "effect": [
+      { "u_lose_effect": "pre_conjunctivitis_viral" },
+      { "u_lose_effect": "pre_conjunctivitis_bacterial" },
+      {
+        "u_add_effect": "conjunctivitis_bacterial",
+        "duration": { "math": [ "rand(259200) + 432000" ] },
+        "target_part": "eyes"
+      }
+    ]
   }
 ]

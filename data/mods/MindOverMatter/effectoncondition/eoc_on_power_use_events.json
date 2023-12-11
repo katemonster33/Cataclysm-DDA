@@ -5,8 +5,12 @@
     "effect": [
       {
         "run_eocs": [
+          "EOC_BIOKIN_REMOVE_METABOLISM_ENHANCE",
           "EOC_CLAIR_REMOVE_SPEED_READ",
-          "EOC_PHOTO_REMOVE_LIGHT_LOCAL",
+          "EOC_CLAIR_REMOVE_SEE_AURAS",
+          "EOC_CLAIR_REMOVE_CRAFT_BONUS",
+          "EOC_PHOTOKIN_REMOVE_LIGHT_LOCAL",
+          "EOC_PHOTOKIN_REMOVE_HIDE_UGLY",
           "EOC_PHOTOKIN_REMOVE_RADIO",
           "EOC_PYRO_REMOVE_FIRE_TOOL",
           "EOC_PYRO_REMOVE_TORCH_WELD",
@@ -16,7 +20,8 @@
           "EOC_TELEPATH_REMOVE_TELEPATHIC_CONCENTRATION"
         ]
       },
-      { "u_lose_effect": "effect_telepath_invisibility" }
+      { "u_lose_effect": "effect_telepath_invisibility" },
+      { "u_lose_effect": "effect_clair_perfect_shot" }
     ]
   },
   {
@@ -28,6 +33,8 @@
       "or": [
         { "u_has_trait": "CLAIR_SPEED_READ" },
         { "u_has_effect": "effect_clair_speed_reader" },
+        { "u_has_effect": "effect_clair_see_auras" },
+        { "u_has_effect": "effect_clair_craft_bonus" },
         { "u_has_effect": "effect_photokin_light_local" },
         { "u_has_item": "pyrokinetic_fire_tool" },
         { "u_has_item": "pyrokinetic_torch_weld" },
@@ -68,6 +75,8 @@
       "or": [
         { "u_has_trait": "CLAIR_SPEED_READ" },
         { "u_has_effect": "effect_clair_speed_reader" },
+        { "u_has_effect": "effect_clair_see_auras" },
+        { "u_has_effect": "effect_clair_craft_bonus" },
         { "u_has_effect": "effect_photokin_light_local" },
         { "u_has_item": "pyrokinetic_fire_tool" },
         { "u_has_item": "pyrokinetic_torch_weld" },
@@ -108,6 +117,9 @@
       "or": [
         { "u_has_trait": "CLAIR_SPEED_READ" },
         { "u_has_effect": "effect_clair_speed_reader" },
+        { "u_has_effect": "effect_clair_see_auras" },
+        { "u_has_effect": "effect_clair_craft_bonus" },
+        { "u_has_effect": "effect_clair_perfect_shot" },
         { "u_has_effect": "effect_photokin_light_local" },
         { "u_has_item": "pyrokinetic_fire_tool" },
         { "u_has_item": "pyrokinetic_torch_weld" },
@@ -148,6 +160,9 @@
       "or": [
         { "u_has_trait": "CLAIR_SPEED_READ" },
         { "u_has_effect": "effect_clair_speed_reader" },
+        { "u_has_effect": "effect_clair_see_auras" },
+        { "u_has_effect": "effect_clair_craft_bonus" },
+        { "u_has_effect": "effect_clair_perfect_shot" },
         { "u_has_effect": "effect_photokin_light_local" },
         { "u_has_item": "pyrokinetic_fire_tool" },
         { "u_has_item": "pyrokinetic_torch_weld" },
@@ -190,6 +205,9 @@
           "or": [
             { "u_has_trait": "CLAIR_SPEED_READ" },
             { "u_has_effect": "effect_clair_speed_reader" },
+            { "u_has_effect": "effect_clair_see_auras" },
+            { "u_has_effect": "effect_clair_craft_bonus" },
+            { "u_has_effect": "effect_clair_perfect_shot" },
             { "u_has_effect": "effect_photokin_light_local" },
             { "u_has_item": "pyrokinetic_fire_tool" },
             { "u_has_item": "pyrokinetic_torch_weld" },
@@ -320,7 +338,7 @@
         { "compare_string": [ "BIOKINETIC", { "context_val": "school" } ] },
         {
           "or": [
-            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "150" ] },
+            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "200" ] },
             { "math": [ "_success", "==", "false" ] },
             { "is_weather": "distant_portal_storm" },
             { "is_weather": "portal_storm" },
@@ -351,7 +369,7 @@
       {
         "u_add_effect": "effect_biokin_overload",
         "duration": {
-          "math": [ "u_val('time: 15 s') * (1 + ( u_val('vitamin', 'name:vitamin_psionic_drain') / 2 ) ) * rng(1, _difficulty)" ]
+          "math": [ "u_val('time: 30 s') * (1 + ( u_val('vitamin', 'name:vitamin_psionic_drain') / 2 ) ) * rng(1, _difficulty)" ]
         }
       }
     ]
@@ -367,7 +385,7 @@
         { "compare_string": [ "CLAIRSENTIENT", { "context_val": "school" } ] },
         {
           "or": [
-            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "150" ] },
+            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "200" ] },
             { "math": [ "_success", "==", "false" ] },
             { "is_weather": "distant_portal_storm" },
             { "is_weather": "portal_storm" },
@@ -420,7 +438,7 @@
         { "compare_string": [ "ELECTROKINETIC", { "context_val": "school" } ] },
         {
           "or": [
-            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "150" ] },
+            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "200" ] },
             { "math": [ "_success", "==", "false" ] },
             { "is_weather": "distant_portal_storm" },
             { "is_weather": "portal_storm" },
@@ -451,7 +469,7 @@
       {
         "u_add_effect": "effect_electrokin_overload",
         "duration": {
-          "math": [ "u_val('time: 15 s') * (1 + ( u_val('vitamin', 'name:vitamin_psionic_drain') / 2 ) ) * rng(1, _difficulty)" ]
+          "math": [ "u_val('time: 5 s') * (1 + ( u_val('vitamin', 'name:vitamin_psionic_drain') / 2 ) ) * rng(1, _difficulty)" ]
         }
       }
     ]
@@ -467,7 +485,7 @@
         { "compare_string": [ "PHOTOKINETIC", { "context_val": "school" } ] },
         {
           "or": [
-            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "150" ] },
+            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "200" ] },
             { "math": [ "_success", "==", "false" ] },
             { "is_weather": "distant_portal_storm" },
             { "is_weather": "portal_storm" },
@@ -520,7 +538,7 @@
         { "compare_string": [ "PYROKINETIC", { "context_val": "school" } ] },
         {
           "or": [
-            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "150" ] },
+            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "200" ] },
             { "math": [ "_success", "==", "false" ] },
             { "is_weather": "distant_portal_storm" },
             { "is_weather": "portal_storm" },
@@ -551,7 +569,7 @@
       {
         "u_add_effect": "effect_pyrokin_overload",
         "duration": {
-          "math": [ "u_val('time: 15 s') * (1 + ( u_val('vitamin', 'name:vitamin_psionic_drain') / 2 ) ) * rng(1, _difficulty)" ]
+          "math": [ "u_val('time: 5 s') * (1 + ( u_val('vitamin', 'name:vitamin_psionic_drain') / 2 ) ) * rng(1, _difficulty)" ]
         }
       }
     ]
@@ -567,7 +585,7 @@
         { "compare_string": [ "TELEKINETIC", { "context_val": "school" } ] },
         {
           "or": [
-            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "150" ] },
+            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "200" ] },
             { "math": [ "_success", "==", "false" ] },
             { "is_weather": "distant_portal_storm" },
             { "is_weather": "portal_storm" },
@@ -614,7 +632,7 @@
         { "compare_string": [ "TELEPATH", { "context_val": "school" } ] },
         {
           "or": [
-            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "150" ] },
+            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "200" ] },
             { "math": [ "_success", "==", "false" ] },
             { "is_weather": "distant_portal_storm" },
             { "is_weather": "portal_storm" },
@@ -667,7 +685,7 @@
         { "compare_string": [ "TELEPORTER", { "context_val": "school" } ] },
         {
           "or": [
-            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "150" ] },
+            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "200" ] },
             { "math": [ "_success", "==", "false" ] },
             { "is_weather": "distant_portal_storm" },
             { "is_weather": "portal_storm" },
@@ -714,7 +732,7 @@
         { "compare_string": [ "VITAKINETIC", { "context_val": "school" } ] },
         {
           "or": [
-            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "150" ] },
+            { "math": [ "u_val('vitamin', 'name:vitamin_psionic_drain')", ">=", "200" ] },
             { "math": [ "_success", "==", "false" ] }
           ]
         },
@@ -742,7 +760,7 @@
       {
         "u_add_effect": "effect_vitakin_overload",
         "duration": {
-          "math": [ "u_val('time: 15 s') * (1 + ( u_val('vitamin', 'name:vitamin_psionic_drain') / 2 ) ) * rng(1, _difficulty)" ]
+          "math": [ "u_val('time: 30 s') * (1 + ( u_val('vitamin', 'name:vitamin_psionic_drain') / 2 ) ) * rng(1, _difficulty)" ]
         }
       }
     ]
