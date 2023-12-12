@@ -64,10 +64,18 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
 {
     ImGui::PushID( text.c_str() );
     ImGuiID itemId = GImGui->CurrentWindow->IDStack.back();
-    ImGui::PushTextWrapPos( max_width );
     const auto color_segments = split_by_color( text );
     std::stack<nc_color> color_stack;
     color_stack.push( color );
+    size_t chars_per_line = size_t( max_width );
+    if( chars_per_line == 0 ) {
+        chars_per_line = SIZE_MAX;
+    }
+    float cursor_start_x = ImGui::GetCursorPosX();
+#if defined(WIN32) || defined(TILES)
+    size_t char_width = size_t( ImGui::CalcTextSize( " " ) );
+    chars_per_line /= char_width;
+#endif
     if( alignment != text_align::Left ) {
         std::string str_raw = remove_color_tags( text );
         int fullWidth = ImGui::GetContentRegionAvail().x;
@@ -84,6 +92,7 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
     }
 
     int i = 0;
+    size_t current_x = 0;
     for( auto seg : color_segments ) {
         if( seg.empty() ) {
             continue;
@@ -98,43 +107,58 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
         }
 
         color = color_stack.empty() ? color : color_stack.top();
-        if( i++ > 0 ) {
-            ImGui::SameLine( 0, 0 );
-        }
-#if !(defined(TILES) || defined(WIN32))
-        int pair_id = color.get_index();
-        pairs &pair = colorpairs[pair_id];
+        for( size_t current_seg_index = 0; current_seg_index < seg.length(); ) {
 
-        int palette_index = pair.FG != 0 ? pair.FG : pair.BG;
-        if( color.is_bold() ) {
-            palette_index += color_loader<RGBTuple>::COLOR_NAMES_COUNT / 2;
-        }
-        RGBTuple &rgbCol = rgbPalette[palette_index];
-        ImGui::TextColored( { static_cast<float>( rgbCol.Red / 255. ), static_cast<float>( rgbCol.Green / 255. ),
-                              static_cast<float>( rgbCol.Blue / 255. ), static_cast<float>( 255. ) },
-                            "%s", seg.c_str() );
-        GImGui->LastItemData.ID = itemId;
+            if( i++ > 0 ) {
+                if( current_x != 0 ) {
+                    ImGui::SameLine( 0, 0 );
+                } else if( alignment == text_align::Left ) {
+                    ImGui::SetCursorPosX( cursor_start_x );
+                }
+            }
+            size_t chars_to_print = seg.length() - current_seg_index;
+            if( alignment != text_align::Left ) {
+                chars_to_print = std::min( chars_per_line - current_x, chars_to_print );
+            }
+#if !(defined(TILES) || defined(WIN32))
+            int pair_id = color.get_index();
+            pairs &pair = colorpairs[pair_id];
+
+            int palette_index = pair.FG != 0 ? pair.FG : pair.BG;
+            if( color.is_bold() ) {
+                palette_index += color_loader<RGBTuple>::COLOR_NAMES_COUNT / 2;
+            }
+            RGBTuple &rgbCol = rgbPalette[palette_index];
+            ImGui::TextColored( { static_cast<float>( rgbCol.Red / 255. ), static_cast<float>( rgbCol.Green / 255. ),
+                                  static_cast<float>( rgbCol.Blue / 255. ), static_cast<float>( 255. ) },
+                                "%s", seg.substr( current_seg_index, chars_to_print ).c_str() );
+            GImGui->LastItemData.ID = itemId;
 #else
-        SDL_Color c = curses_color_to_SDL( color );
-        ImGui::TextColored( { static_cast<float>( c.r / 255. ), static_cast<float>( c.g / 255. ),
-                              static_cast<float>( c.b / 255. ), static_cast<float>( c.a / 255. ) },
-                            "%s", seg.c_str() );
-        GImGui->LastItemData.ID = itemId;
+            SDL_Color c = curses_color_to_SDL( color );
+            ImGui::TextColored( { static_cast<float>( c.r / 255. ), static_cast<float>( c.g / 255. ),
+                                  static_cast<float>( c.b / 255. ), static_cast<float>( c.a / 255. ) },
+                                "%s", seg.substr( current_seg_index, chars_to_print ).c_str() );
+            GImGui->LastItemData.ID = itemId;
 #endif
-        if( is_focused && !*is_focused ) {
-            *is_focused = ImGui::IsItemFocused();
-        }
-        if( is_hovered && !*is_hovered ) {
+            current_seg_index += chars_to_print;
+            current_x += chars_to_print;
+            if( current_x >= chars_per_line ) {
+                current_x = 0;
+            }
+            if( is_focused && !*is_focused ) {
+                *is_focused = ImGui::IsItemFocused();
+            }
+            if( is_hovered && !*is_hovered ) {
 #if defined(TILES) || defined(WIN32)
-            *is_hovered = ImGui::IsItemHovered( ImGuiHoveredFlags_NoNavOverride );
+                *is_hovered = ImGui::IsItemHovered( ImGuiHoveredFlags_NoNavOverride );
 #else
-            *is_hovered = ImGui::IsItemHovered( );
+                *is_hovered = ImGui::IsItemHovered( );
 #endif
+            }
         }
 
     }
 
-    ImGui::PopTextWrapPos();
     ImGui::PopID();
 }
 
