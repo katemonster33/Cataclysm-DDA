@@ -380,7 +380,7 @@ void trade_selector::execute()
 
     while( !exit ) {
 #if !(defined(WIN32) || defined(TILES))
-        ui_manager::redraw_invalidated();
+        ui_adaptor::redraw_all_invalidated( true );
 #endif
         mouse_hovered_entry = nullptr;
         keyboard_focused_entry = nullptr;
