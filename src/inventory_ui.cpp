@@ -3247,7 +3247,9 @@ drop_locations inventory_multiselector::execute( bool allow_empty )
     }
     debug_print_timer( tp_start );
     while( true ) {
-        ui_manager::redraw();
+#if !(defined(WIN32) || defined(TILES))
+        ui_adaptor::redraw_all_invalidated( true );
+#endif
 
         const inventory_input input = get_input();
 
@@ -3287,7 +3289,10 @@ std::pair<const item *, const item *> inventory_compare_selector::execute()
     }
     debug_print_timer( tp_start );
     while( true ) {
-        ui_manager::redraw();
+#if !(defined(WIN32) || defined(TILES))
+        // only needed for ImTui - NCurses mode
+        ui_adaptor::redraw_all_invalidated( true );
+#endif
 
         const inventory_input input = get_input();
 
@@ -3554,7 +3559,10 @@ drop_locations inventory_drop_selector::execute()
     }
     debug_print_timer( tp_start );
     while( true ) {
-        ui_manager::redraw();
+#if !(defined(WIN32) || defined(TILES))
+        // only needed for ImTui - NCurses mode
+        ui_adaptor::redraw_all_invalidated( true );
+#endif
 
         const inventory_input input = get_input();
         if( input.action == "CONFIRM" ) {
@@ -3750,7 +3758,9 @@ drop_locations pickup_selector::execute()
     debug_print_timer( tp_start );
 
     while( true ) {
-        ui_manager::redraw();
+#if !(defined(WIN32) || defined(TILES))
+        ui_adaptor::redraw_all_invalidated( true );
+#endif
 
         const inventory_input input = get_input();
 
@@ -3955,7 +3965,7 @@ int inventory_examiner::execute()
     while( true ) {
 #if !(defined(WIN32) || defined(TILES))
         // only needed for ImTui - NCurses mode
-        ui_manager::redraw();
+        ui_adaptor::redraw_all_invalidated( true );
 #endif
 
         const inventory_input input = get_input();
@@ -4055,7 +4065,9 @@ std::pair<item_location, bool> unload_selector::execute()
     item_location startDragItem;
     bool dragActive = false;
     while( true ) {
-        ui_manager::redraw();
+#if !(defined(WIN32) || defined(TILES))
+        ui_adaptor::redraw_all_invalidated( true );
+#endif
         const inventory_input input = get_input();
         if( input.entry != nullptr ) {
             if( drag_enabled && input.action == "CLICK_AND_DRAG" ) {

@@ -73,7 +73,7 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
     }
     float cursor_start_x = ImGui::GetCursorPosX();
 #if defined(WIN32) || defined(TILES)
-    size_t char_width = size_t( ImGui::CalcTextSize( " " ) );
+    size_t char_width = size_t( ImGui::CalcTextSize( " " ).x );
     chars_per_line /= char_width;
 #endif
     if( alignment != text_align::Left ) {
