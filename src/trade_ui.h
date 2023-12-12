@@ -40,7 +40,6 @@ class trade_selector : public inventory_drop_selector
         select_t to_trade() const;
         void resize( const cataimgui::bounds &pane_bounds );
         std::vector<inventory_entry *> get_items();
-        //shared_ptr_fast<ui_adaptor> get_ui() const;
         input_context const *get_ctxt() const;
 
         static constexpr char const *ACTION_AUTOBALANCE = "AUTO_BALANCE";
@@ -50,7 +49,6 @@ class trade_selector : public inventory_drop_selector
 
     private:
         trade_ui *_parent;
-        //shared_ptr_fast<ui_adaptor> _ui;
         input_context _ctxt_trade;
 };
 
@@ -119,8 +117,6 @@ class trade_ui : public cataimgui::window
         currency_t _cost = 0;
         currency_t _balance = 0;
         std::string const _title;
-        //catacurses::window _header_w;
-        //ui_adaptor _header_ui;
 
         void _process( event const &ev );
         bool _confirm_trade() const;
