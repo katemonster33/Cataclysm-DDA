@@ -161,11 +161,10 @@ trade_ui::trade_result_t trade_ui::perform_trade()
     _exit = false;
     _traded = false;
     inventory_entry *last_focused_entry = nullptr;
-    std::vector<inventory_entry *> ss = _panes[_cpane]->get_items();
-    if( !ss.empty() ) {
-        _panes[_cpane]->highlight_one_of( { ss[0]->any_item() } );
-    }
     while( !_exit ) {
+#if !(defined(WIN32) || defined(TILES))
+        ui_adaptor::redraw_all_invalidated( true );
+#endif
         _panes[_cpane]->execute();
 
         while( !_queue.empty() ) {
@@ -173,20 +172,13 @@ trade_ui::trade_result_t trade_ui::perform_trade()
             _queue.pop();
             _process( ev );
         }
-        if( last_focused_entry != inventory_selector::mouse_hovered_entry ) {
-            if( inventory_selector::mouse_hovered_entry ) {
-                int new_cpane = 0;
-                for( new_cpane = 0; new_cpane < 2; new_cpane++ ) {
-                    for( inventory_entry *ent : _panes[new_cpane]->get_items() ) {
-                        // selected entry belongs to this pane? break - we've figured out the selected pane
-                        if( ent == inventory_selector::mouse_hovered_entry ) {
-                            _cpane = new_cpane;
-                            break;
-                        }
-                    }
-                }
+        for( int new_cpane = 0; new_cpane < 2;
+             new_cpane++ ) { // selected entry belongs to this pane? break - we've figured out the selected pane
+            if( _panes[new_cpane]->mouse_hovered_entry != nullptr &&
+                _panes[new_cpane]->mouse_hovered_entry->is_item() ) {
+                _cpane = new_cpane;
+                break;
             }
-            last_focused_entry = inventory_selector::mouse_hovered_entry;
         }
     }
 
@@ -379,11 +371,6 @@ void trade_selector::execute()
     columns[0]->on_activate();
 
     while( !exit ) {
-#if !(defined(WIN32) || defined(TILES))
-        ui_adaptor::redraw_all_invalidated( true );
-#endif
-        mouse_hovered_entry = nullptr;
-        keyboard_focused_entry = nullptr;
         std::string const &action = _ctxt_trade.handle_input();
         if( !is_open ) {
             break;

@@ -68,8 +68,6 @@ static const item_category_id item_category_ITEMS_WORN( "ITEMS_WORN" );
 static const item_category_id item_category_WEAPON_HELD( "WEAPON_HELD" );
 
 bool inventory_selector::chevron_hovered = false;
-inventory_entry *inventory_selector::mouse_hovered_entry = nullptr;
-inventory_entry *inventory_selector::keyboard_focused_entry = nullptr;
 const item_location *inventory_selector::entry_to_be_focused = nullptr;
 
 namespace
