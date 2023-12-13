@@ -72,8 +72,9 @@
 #include "string_formatter.h"
 #include "ui_manager.h"
 #include "wcwidth.h"
-#include "imgui/imgui_impl_sdl2.h"
-#include "imgui/imgui_impl_sdlrenderer.h"
+#include "cata_imgui.h"
+
+cataimgui::client *imclient = nullptr;
 
 #if defined(__linux__)
 #   include <cstdlib> // getenv()/setenv()
@@ -431,18 +432,9 @@ static void WinCreate()
         geometry = std::make_unique<DefaultGeometryRenderer>();
     }
 
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO &io = ImGui::GetIO();
-    ( void )io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplSDL2_InitForSDLRenderer( win_nonconst, renderer_nonconst );
-    ImGui_ImplSDLRenderer_Init( renderer_nonconst );
+    cataimgui::client::sdl_renderer = renderer_nonconst;
+    cataimgui::client::sdl_window = win_nonconst;
+    imclient = new cataimgui::client();
 
     //io.Fonts->AddFontDefault();
     //io.Fonts->Build();
@@ -453,7 +445,7 @@ static void WinDestroy()
 #if defined(__ANDROID__)
     touch_joystick.reset();
 #endif
-    ImGui_ImplSDL2_Shutdown();
+    delete imclient;
     shutdown_sound();
     tilecontext.reset();
     gamepad::quit();
@@ -552,10 +544,7 @@ void refresh_display()
         return;
     }
 
-    ImGui_ImplSDLRenderer_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
-
-    ImGui::NewFrame();
+    imclient->new_frame();
     ui_adaptor::redraw_all_invalidated( true );
 
     // Select default target (the window), copy rendered buffer
@@ -563,7 +552,6 @@ void refresh_display()
     SetRenderTarget( renderer, nullptr );
 
     ClearScreen();
-    ImGui::Render();
 #if defined(__ANDROID__)
     SDL_Rect dstrect = get_android_render_rect( TERMINAL_WIDTH * fontwidth,
                        TERMINAL_HEIGHT * fontheight );
@@ -578,7 +566,7 @@ void refresh_display()
     }
     draw_virtual_joystick();
 #endif
-    ImGui_ImplSDLRenderer_RenderDrawData( ImGui::GetDrawData() );
+    imclient->end_frame();
     SDL_RenderPresent( renderer.get() );
     SetRenderTarget( renderer, display_buffer );
 }
@@ -3037,7 +3025,7 @@ static void CheckMessages()
     bool render_target_reset = false;
 
     while( SDL_PollEvent( &ev ) ) {
-        ImGui_ImplSDL2_ProcessEvent( &ev );
+        imclient->process_input(&ev);
         switch( ev.type ) {
             case SDL_WINDOWEVENT:
                 switch( ev.window.event ) {

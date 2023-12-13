@@ -211,7 +211,9 @@ nc_color color_manager::highlight_from_names( const std::string &name,
     return color_array[id].color;
 }
 
+#if !(defined(TILES) || defined(WIN32))
 extern cataimgui::client *imclient;
+#endif
 
 void color_manager::load_default()
 {

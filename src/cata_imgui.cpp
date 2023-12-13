@@ -147,24 +147,46 @@ RGBTuple color_loader<RGBTuple>::from_rgb( const int r, const int g, const int b
 #include <imgui/imgui_impl_sdl2.h>
 #include <imgui/imgui_impl_sdlrenderer.h>
 
+SDL_Renderer *cataimgui::client::sdl_renderer = nullptr;
+SDL_Window *cataimgui::client::sdl_window = nullptr;
+
 cataimgui::client::client()
 {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    ( void )io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    ImGui_ImplSDL2_InitForSDLRenderer( sdl_window, sdl_renderer );
+    ImGui_ImplSDLRenderer_Init( sdl_renderer );
 }
 
 cataimgui::client::~client()
 {
-
+    ImGui_ImplSDL2_Shutdown();
 }
 
 void cataimgui::client::new_frame()
 {
+    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
 
+    ImGui::NewFrame();
 }
 
 void cataimgui::client::end_frame()
 {
+    ImGui::Render();
+    ImGui_ImplSDLRenderer_RenderDrawData( ImGui::GetDrawData() );
+}
 
+void cataimgui::client::process_input( void *input )
+{
+    ImGui_ImplSDL2_ProcessEvent( static_cast<const SDL_Event *>( input ) );
 }
 
 #endif

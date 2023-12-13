@@ -8,6 +8,11 @@
 class nc_color;
 struct item_info_data;
 
+#if defined(WIN32) || defined(TILES)
+struct SDL_Renderer;
+struct SDL_Window;
+#endif
+
 namespace cataimgui
 {
 struct bounds {
@@ -50,6 +55,9 @@ class client
 #if !(defined(TILES) || defined(WIN32))
         void upload_color_pair( int p, int f, int b );
         void set_alloced_pair_count( short count );
+#else
+        static struct SDL_Renderer *sdl_renderer;
+        static struct SDL_Window *sdl_window;
 #endif
 };
 
