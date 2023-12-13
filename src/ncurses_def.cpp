@@ -285,8 +285,8 @@ static_assert( catacurses::white == COLOR_WHITE,
 
 void catacurses::init_pair( const short pair, const base_color f, const base_color b )
 {
-    if(imclient) {
-        imclient->upload_color_pair(pair, static_cast<int>(f), static_cast<int>(b));
+    if( imclient ) {
+        imclient->upload_color_pair( pair, static_cast<int>( f ), static_cast<int>( b ) );
     }
     return curses_check_result( ::init_pair( pair, static_cast<short>( f ), static_cast<short>( b ) ),
                                 OK, "init_pair" );
@@ -411,7 +411,7 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
             MEVENT event;
             if( getmouse( &event ) == OK ) {
                 rval.type = input_event_t::mouse;
-                rval.mouse_pos = point( event.x, event.y ); 
+                rval.mouse_pos = point( event.x, event.y );
                 if( event.bstate & BUTTON1_CLICKED || event.bstate & BUTTON1_RELEASED ) {
                     rval.add_input( MouseInput::LeftButtonReleased );
                 } else if( event.bstate & BUTTON1_PRESSED ) {
@@ -458,7 +458,7 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
                 // Other control character, etc. - no text at all, return an event
                 // without the text property
                 previously_pressed_key = key;
-                imclient->process_input(&rval);
+                imclient->process_input( &rval );
                 return input_event( key, input_event_t::keyboard_char );
             }
             // Now we have loaded an UTF-8 sequence (possibly several bytes)
@@ -475,7 +475,7 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
             // as it would  conflict with the special keys defined by ncurses
             rval.add_input( key );
         }
-        imclient->process_input(&rval);
+        imclient->process_input( &rval );
     } while( key == KEY_RESIZE );
 
     return rval;
