@@ -3595,7 +3595,7 @@ drop_locations inventory_drop_selector::execute()
                 if( !warn_liquid ||
                     show_popup( new cataimgui::message_box( _( "Warning" ),
                                 _( "You are dropping liquid from its container.  You might not be able to pick it back up.  Really do so?" ),
-                                cataimgui::mbox_btn::YesNo ) ) == cataimgui::dialog_result::YesClicked ) {
+                                cataimgui::mbox_btn::BT_YesNo ) ) == cataimgui::dialog_result::YesClicked ) {
                     should_drop_liquid = drop_liquid::yes;
                 } else {
                     should_drop_liquid = drop_liquid::no;

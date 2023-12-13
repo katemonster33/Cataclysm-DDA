@@ -18,10 +18,10 @@ struct bounds {
 };
 
 enum class mbox_btn {
-    OK = 0,
-    OKCancel = 1,
-    YesNoCancel = 2,
-    YesNo = 3
+    BT_OK = 0,
+    BT_OKCancel = 1,
+    BT_YesNoCancel = 2,
+    BT_YesNo = 3
 };
 
 enum class dialog_result {
@@ -38,6 +38,20 @@ enum class text_align {
     Right = 2
 };
 
+class client
+{
+    public:
+        client();
+        ~client();
+
+        void new_frame();
+        void end_frame();
+        void process_input( void *input );
+#if !(defined(TILES) || defined(WIN32))
+        void upload_color_pair( int p, int f, int b );
+        void set_alloced_pair_count( short count );
+#endif
+};
 
 class window
 {
@@ -116,7 +130,8 @@ class message_box : public popup
         mbox_btn buttons;
         std::string prompt;
     public:
-        message_box( const std::string &title, const std::string &prompt, mbox_btn buttons = mbox_btn::OK );
+        message_box( const std::string &title, const std::string &prompt,
+                     mbox_btn buttons = mbox_btn::BT_OK );
         static dialog_result show( const std::string &title, const std::string &text );
     protected:
         void draw_mbox_btn( const std::string &text, dialog_result result_if_clicked );
