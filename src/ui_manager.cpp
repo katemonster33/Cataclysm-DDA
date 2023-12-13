@@ -336,7 +336,7 @@ void ui_adaptor::redraw_all()
 }
 
 #if !(defined(TILES) || defined(_WIN32))
-extern cataimgui::client* imclient;
+extern cataimgui::client *imclient;
 #endif
 
 void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
@@ -346,7 +346,7 @@ void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
     }
 
 #if !(defined(TILES) || defined(_WIN32))
-    if(imclient) {
+    if( imclient ) {
         imclient->new_frame();
     }
 #endif
@@ -457,9 +457,9 @@ void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
     } while( restart_redrawing );
 
 #if !(defined(TILES) || defined(_WIN32))
-if(imclient) {
-    imclient->end_frame();
-}
+    if( imclient ) {
+        imclient->end_frame();
+    }
 #endif
 }
 
