@@ -5,9 +5,6 @@
 #include "input.h"
 #include "point.h"
 #include "translations.h"
-#include "imtui/imtui-impl-ncurses.h"
-#include "imgui/imgui.h"
-#include "imtui/imtui-impl-text.h"
 #include "cata_imgui.h"
 
 // ncurses can define some functions as macros, but we need those identifiers
@@ -38,6 +35,8 @@
 #include "game_ui.h"
 #include "output.h"
 #include "ui_manager.h"
+
+cataimgui::client *imclient = nullptr;
 
 static void curses_check_result( const int result, const int expected, const char *const /*name*/ )
 {
@@ -296,8 +295,9 @@ static_assert( catacurses::white == COLOR_WHITE,
 
 void catacurses::init_pair( const short pair, const base_color f, const base_color b )
 {
-    ImTui_ImplNcurses_UploadColorPair( pair, static_cast<short>( f ), static_cast<short>( b ) );
-    cataimgui::init_pair( pair, f, b );
+    if(imclient) {
+        imclient->upload_color_pair(pair, static_cast<int>(f), static_cast<int>(b));
+    }
     return curses_check_result( ::init_pair( pair, static_cast<short>( f ), static_cast<short>( b ) ),
                                 OK, "init_pair" );
 }
@@ -315,7 +315,6 @@ void catacurses::resizeterm()
         catacurses::doupdate();
     }
 }
-ImTui::TScreen *imtui_screen = nullptr;
 // init_interface is defined in another cpp file, depending on build type:
 // wincurse.cpp for Windows builds without SDL and sdltiles.cpp for SDL builds.
 void catacurses::init_interface()
@@ -337,16 +336,8 @@ void catacurses::init_interface()
     set_escdelay( 10 ); // Make Escape actually responsive
     // TODO: error checking
     start_color();
+    imclient = new cataimgui::client();
     init_colors();
-    cataimgui::load_colors();
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-
-    imtui_screen = ImTui_ImplNcurses_Init();
-    ImTui_ImplText_Init();
-
-    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-
 #if !defined(__CYGWIN__)
     // ncurses mouse registration
     mouseinterval( 0 );
@@ -385,10 +376,6 @@ void input_manager::pump_events()
     previously_pressed_key = 0;
 }
 
-#if !(defined(TILES) || defined(WIN32))
-std::vector<std::pair<int, ImTui::mouse_event>> imtui_events_list;
-#endif
-
 // there isn't a portable way to get raw key code on curses,
 // ignoring preferred keyboard mode
 input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyboard_mode*/ )
@@ -405,10 +392,6 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
         // flush any output
         catacurses::doupdate();
         key = getch();
-#if !(defined(TILES) || defined(WIN32))
-        std::pair<int, ImTui::mouse_event> imtui_event;
-        imtui_event.first = key;
-#endif
         if( key != ERR ) {
             int newch;
             // Clear the buffer of characters that match the one we're going to act on.
@@ -436,14 +419,8 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
         } else if( key == KEY_MOUSE ) {
             MEVENT event;
             if( getmouse( &event ) == OK ) {
-#if !(defined(TILES) || defined(WIN32))
-                imtui_event.second.x = event.x;
-                imtui_event.second.y = event.y;
-                imtui_event.second.z = event.z;
-                imtui_event.second.bstate = event.bstate;
-#endif
                 rval.type = input_event_t::mouse;
-                rval.mouse_pos = point( event.x, event.y );
+                rval.mouse_pos = point( event.x, event.y ); 
                 if( event.bstate & BUTTON1_CLICKED || event.bstate & BUTTON1_RELEASED ) {
                     rval.add_input( MouseInput::LeftButtonReleased );
                 } else if( event.bstate & BUTTON1_PRESSED ) {
@@ -490,9 +467,7 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
                 // Other control character, etc. - no text at all, return an event
                 // without the text property
                 previously_pressed_key = key;
-#if !(defined(TILES) || defined(WIN32))
-                imtui_events_list.push_back( imtui_event );
-#endif
+                imclient->process_input(&rval);
                 return input_event( key, input_event_t::keyboard_char );
             }
             // Now we have loaded an UTF-8 sequence (possibly several bytes)
@@ -509,9 +484,7 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
             // as it would  conflict with the special keys defined by ncurses
             rval.add_input( key );
         }
-#if !(defined(TILES) || defined(WIN32))
-        imtui_events_list.push_back( imtui_event );
-#endif
+        imclient->process_input(&rval);
     } while( key == KEY_RESIZE );
 
     return rval;

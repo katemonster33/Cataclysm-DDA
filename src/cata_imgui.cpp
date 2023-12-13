@@ -8,6 +8,9 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 #if !(defined(TILES) || defined(WIN32))
+#include <curses.h>
+#include <imtui/imtui-impl-ncurses.h>
+#include <imtui/imtui-impl-text.h>
 #include "color_loader.h"
 
 struct RGBTuple {
@@ -23,6 +26,97 @@ struct pairs {
 
 std::array<RGBTuple, color_loader<RGBTuple>::COLOR_NAMES_COUNT> rgbPalette;
 std::array<pairs, 100> colorpairs;   //storage for pair'ed colored
+
+ImTui::TScreen *imtui_screen = nullptr;
+std::vector<std::pair<int, ImTui::mouse_event>> imtui_events;
+
+cataimgui::client::client()
+{
+    load_colors();
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+
+    imtui_screen = ImTui_ImplNcurses_Init();
+    ImTui_ImplText_Init();
+
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+}
+
+cataimgui::client::~client()
+{
+    ImTui_ImplNcurses_Shutdown();
+    ImTui_ImplText_Shutdown();
+    ImGui::Shutdown();
+}
+
+void cataimgui::client::new_frame()
+{
+    ImTui_ImplNcurses_NewFrame( imtui_events );
+    imtui_events.clear();
+    ImTui_ImplText_NewFrame();
+
+    ImGui::NewFrame();
+}
+
+void cataimgui::client::end_frame()
+{
+    ImGui::Render();
+
+    ImTui_ImplText_RenderDrawData( ImGui::GetDrawData(), imtui_screen );
+    ImTui_ImplNcurses_DrawScreen();
+}
+
+void cataimgui::client::upload_color_pair( int p, int f, int b )
+{
+    ImTui_ImplNcurses_UploadColorPair( p, static_cast<short>( f ), static_cast<short>( b ) );
+    cataimgui::init_pair( p, f, b );
+}
+
+void cataimgui::client::set_alloced_pair_count( short count )
+{
+    ImTui_ImplNcurses_SetAllocedPairCount( count );
+}
+
+void cataimgui::client::process_input( void *input )
+{
+    if( input ) {
+        input_event *curses_input = static_cast<input_event *>( input );
+        ImTui::mouse_event new_mouse_event = ImTui::mouse_event();
+        if( curses_input->type == input_event_t::mouse ) {
+            new_mouse_event.x = curses_input->mouse_pos.x;
+            new_mouse_event.y = curses_input->mouse_pos.y;
+            new_mouse_event.bstate = 0;
+            for( int input_raw_key : curses_input->sequence ) {
+                switch( static_cast<MouseInput>( input_raw_key ) ) {
+                    case MouseInput::LeftButtonPressed:
+                        new_mouse_event.bstate |= BUTTON1_PRESSED;
+                        break;
+                    case MouseInput::LeftButtonReleased:
+                        new_mouse_event.bstate |= BUTTON1_RELEASED;
+                        break;
+                    case MouseInput::RightButtonPressed:
+                        new_mouse_event.bstate |= BUTTON3_PRESSED;
+                        break;
+                    case MouseInput::RightButtonReleased:
+                        new_mouse_event.bstate |= BUTTON3_RELEASED;
+                        break;
+                    case MouseInput::ScrollWheelUp:
+                        new_mouse_event.bstate |= BUTTON4_PRESSED;
+                        break;
+                    case MouseInput::ScrollWheelDown:
+                        new_mouse_event.bstate |= BUTTON5_PRESSED;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            imtui_events.push_back( std::pair<int, ImTui::mouse_event>( KEY_MOUSE, new_mouse_event ) );
+        } else {
+            imtui_events.push_back( std::pair<int, ImTui::mouse_event>( curses_input->get_first_input(),
+                                    new_mouse_event ) );
+        }
+    }
+}
 
 void cataimgui::load_colors()
 {
@@ -50,6 +144,29 @@ RGBTuple color_loader<RGBTuple>::from_rgb( const int r, const int g, const int b
 }
 #else
 #include "sdl_utils.h"
+#include <imgui/imgui_impl_sdl2.h>
+#include <imgui/imgui_impl_sdlrenderer.h>
+
+cataimgui::client::client()
+{
+
+}
+
+cataimgui::client::~client()
+{
+
+}
+
+void cataimgui::client::new_frame()
+{
+
+}
+
+void cataimgui::client::end_frame()
+{
+
+}
+
 #endif
 
 void cataimgui::window::draw_colored_text( std::string const &text, const nc_color &color,
@@ -562,25 +679,25 @@ void cataimgui::message_box::draw_controls()
     draw_colored_text( prompt, tcolor );
     ImGui::Unindent( 1.0f );
     if( ImGui::IsKeyDown( ImGuiKey_Escape ) ) {
-        if( buttons == mbox_btn::OKCancel || buttons == mbox_btn::YesNoCancel ) {
+        if( buttons == mbox_btn::BT_OKCancel || buttons == mbox_btn::BT_YesNoCancel ) {
             result = dialog_result::CancelClicked;
-        } else if( buttons == mbox_btn::YesNo ) {
+        } else if( buttons == mbox_btn::BT_YesNo ) {
             result = dialog_result::NoClicked;
-        } else if( buttons == mbox_btn::OK ) {
+        } else if( buttons == mbox_btn::BT_OK ) {
             result = dialog_result::OKClicked;
         }
     }
-    if( buttons == mbox_btn::OK || buttons == mbox_btn::OKCancel ) {
+    if( buttons == mbox_btn::BT_OK || buttons == mbox_btn::BT_OKCancel ) {
         draw_mbox_btn( _( "OK" ), dialog_result::OKClicked );
         ImGui::SameLine();
     }
-    if( buttons == mbox_btn::YesNo || buttons == mbox_btn::YesNoCancel ) {
+    if( buttons == mbox_btn::BT_YesNo || buttons == mbox_btn::BT_YesNoCancel ) {
         draw_mbox_btn( _( "Yes" ), dialog_result::YesClicked );
         ImGui::SameLine();
         draw_mbox_btn( _( "No" ), dialog_result::NoClicked );
         ImGui::SameLine();
     }
-    if( buttons == mbox_btn::YesNoCancel || buttons == mbox_btn::OKCancel ) {
+    if( buttons == mbox_btn::BT_YesNoCancel || buttons == mbox_btn::BT_OKCancel ) {
         draw_mbox_btn( _( "Cancel" ), dialog_result::CancelClicked );
     }
     if( !is_draw_callback_set() && result != dialog_result::None ) {

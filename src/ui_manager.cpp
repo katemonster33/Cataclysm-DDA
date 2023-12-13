@@ -13,12 +13,7 @@
 #include "game_ui.h"
 #include "point.h"
 #include "sdltiles.h" // IWYU pragma: keep
-
-#if !(defined(TILES) || defined(_WIN32))
-#include "imgui/imgui.h"
-#include "imtui/imtui-impl-ncurses.h"
-#include "imtui/imtui-impl-text.h"
-#endif
+#include "cata_imgui.h"
 
 using ui_stack_t = std::vector<std::reference_wrapper<ui_adaptor>>;
 
@@ -341,8 +336,7 @@ void ui_adaptor::redraw_all()
 }
 
 #if !(defined(TILES) || defined(_WIN32))
-extern ImTui::TScreen *imtui_screen;
-extern std::vector<std::pair<int, ImTui::mouse_event>> imtui_events_list;
+extern cataimgui::client* imclient;
 #endif
 
 void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
@@ -352,11 +346,9 @@ void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
     }
 
 #if !(defined(TILES) || defined(_WIN32))
-    ImTui_ImplNcurses_NewFrame( imtui_events_list );
-    imtui_events_list.clear();
-    ImTui_ImplText_NewFrame();
-
-    ImGui::NewFrame();
+    if(imclient) {
+        imclient->new_frame();
+    }
 #endif
 
     restore_on_out_of_scope<bool> prev_redraw_in_progress( redraw_in_progress );
@@ -465,10 +457,9 @@ void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
     } while( restart_redrawing );
 
 #if !(defined(TILES) || defined(_WIN32))
-    ImGui::Render();
-
-    ImTui_ImplText_RenderDrawData( ImGui::GetDrawData(), imtui_screen );
-    ImTui_ImplNcurses_DrawScreen();
+if(imclient) {
+    imclient->end_frame();
+}
 #endif
 }
 
