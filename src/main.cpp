@@ -55,14 +55,12 @@
 #include "translations.h"
 #include "type_id.h"
 #include "ui_manager.h"
+#include "cata_imgui.h"
 #if defined(MACOSX)
 #   include <unistd.h> // getpid()
 #endif
 
-#if !(defined(TILES) || defined(_WIN32))
-#include "imtui/imtui-impl-ncurses.h"
-#include "imtui/imtui-impl-text.h"
-#endif
+extern cataimgui::client *imclient;
 
 #if defined(PREFIX)
 #   undef PREFIX
@@ -168,6 +166,9 @@ void exit_handler( int s )
         } else
 #endif
         {
+            if(imclient) {
+                delete imclient;
+            }
             exit( exit_status );
         }
     }

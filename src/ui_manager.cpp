@@ -13,12 +13,7 @@
 #include "game_ui.h"
 #include "point.h"
 #include "sdltiles.h" // IWYU pragma: keep
-
-#if !(defined(TILES) || defined(_WIN32))
-#include "imgui/imgui.h"
-#include "imtui/imtui-impl-ncurses.h"
-#include "imtui/imtui-impl-text.h"
-#endif
+#include "cata_imgui.h"
 
 using ui_stack_t = std::vector<std::reference_wrapper<ui_adaptor>>;
 
@@ -327,11 +322,21 @@ void ui_adaptor::redraw()
     redraw_invalidated();
 }
 
-void ui_adaptor::redraw_invalidated()
+#if !(defined(TILES) || defined(_WIN32))
+extern cataimgui::client* imclient;
+#endif
+
+void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
 {
     if( test_mode || ui_stack.empty() ) {
         return;
     }
+
+#if !(defined(TILES) || defined(_WIN32))
+    if(imclient) {
+        imclient->new_frame();
+    }
+#endif
 
     restore_on_out_of_scope<bool> prev_redraw_in_progress( redraw_in_progress );
     restore_on_out_of_scope<bool> prev_restart_redrawing( restart_redrawing );
@@ -433,6 +438,12 @@ void ui_adaptor::redraw_invalidated()
             }
         }
     } while( restart_redrawing );
+
+#if !(defined(TILES) || defined(_WIN32))
+if(imclient) {
+    imclient->end_frame();
+}
+#endif
 }
 
 void ui_adaptor::screen_resized()
