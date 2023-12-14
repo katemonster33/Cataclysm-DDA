@@ -112,8 +112,10 @@ void cataimgui::client::process_input( void *input )
             }
             imtui_events.push_back( std::pair<int, ImTui::mouse_event>( KEY_MOUSE, new_mouse_event ) );
         } else {
-            imtui_events.push_back( std::pair<int, ImTui::mouse_event>( curses_input->get_first_input(),
-                                    new_mouse_event ) );
+            int ch = curses_input->get_first_input();
+            if( ch != UNKNOWN_UNICODE ) {
+                imtui_events.push_back( std::pair<int, ImTui::mouse_event>( ch, new_mouse_event ) );
+            }
         }
     }
 }
@@ -256,7 +258,7 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
                 }
             }
             size_t chars_to_print = seg.length() - current_seg_index;
-            if( alignment != text_align::Left ) {
+            if( alignment == text_align::Left ) {
                 chars_to_print = std::min( chars_per_line - current_x, chars_to_print );
             }
 #if !(defined(TILES) || defined(WIN32))
@@ -426,6 +428,7 @@ cataimgui::window::window( int window_flags )
 
     this->window_flags = window_flags | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
                          ImGuiWindowFlags_NoSavedSettings;
+    open_popup_requested = false;
     parent = nullptr;
 }
 
@@ -495,6 +498,7 @@ void cataimgui::window::draw()
             if( active_popup ) {
                 if( open_popup_requested ) {
                     active_popup->open();
+                    open_popup_requested = false;
                 }
                 if( active_popup->is_open ) {
                     active_popup->draw();
@@ -520,11 +524,13 @@ void cataimgui::window::draw()
 /// <param name="next_popup">the popup to be shown</param>
 void cataimgui::window::show_popup_async( const std::shared_ptr<popup> &next_popup )
 {
+    open_popup_requested = true;
     this->active_popup = next_popup;
 }
 
 void cataimgui::window::show_popup_async( popup *next_popup )
 {
+    open_popup_requested = true;
     this->active_popup.reset( next_popup );
 }
 
@@ -625,6 +631,9 @@ void cataimgui::popup::draw()
 #else
     ImGui::SetNextWindowSize( { 50, 0 } );
 #endif
+    ImGui::SetNextWindowPos( ImVec2( ImGui::GetIO().DisplaySize.x * 0.5f,
+                                     ImGui::GetIO().DisplaySize.y * 0.5f ), ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
+
     if( is_modal ) {
         if( ImGui::BeginPopupModal( id.c_str(), &is_open, ImGuiWindowFlags_AlwaysAutoResize ) ) {
             draw_controls();
@@ -653,7 +662,6 @@ void cataimgui::popup::open()
 void cataimgui::popup::close()
 {
     is_open = false;
-    ImGui::CloseCurrentPopup();
 }
 
 cataimgui::dialog_result cataimgui::popup::get_result()
@@ -667,8 +675,7 @@ bool cataimgui::popup::is_draw_callback_set()
 }
 
 cataimgui::message_box::message_box( const std::string &title,
-                                     const std::string &prompt, cataimgui::mbox_btn buttons ) : cataimgui::popup( title,
-                                                 true )
+                                     const std::string &prompt, cataimgui::mbox_btn buttons ) : cataimgui::popup( title, true )
 {
     this->buttons = buttons;
     this->prompt = prompt;
@@ -698,7 +705,7 @@ void cataimgui::message_box::draw_controls()
 {
     ImGui::Indent( 1.0f );
     nc_color tcolor = c_light_gray;
-    draw_colored_text( prompt, tcolor );
+    draw_colored_text( prompt, tcolor, cataimgui::text_align::Left, ImGui::GetContentRegionAvail().x );
     ImGui::Unindent( 1.0f );
     if( ImGui::IsKeyDown( ImGuiKey_Escape ) ) {
         if( buttons == mbox_btn::BT_OKCancel || buttons == mbox_btn::BT_YesNoCancel ) {
