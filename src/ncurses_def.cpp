@@ -467,8 +467,9 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
                 // Other control character, etc. - no text at all, return an event
                 // without the text property
                 previously_pressed_key = key;
-                imclient->process_input( &rval );
-                return input_event( key, input_event_t::keyboard_char );
+                input_event tmp_event( key, input_event_t::keyboard_char );
+                imclient->process_input( &tmp_event );
+                return tmp_event;
             }
             // Now we have loaded an UTF-8 sequence (possibly several bytes)
             // but we should only return *one* key, so return the code point of it.
