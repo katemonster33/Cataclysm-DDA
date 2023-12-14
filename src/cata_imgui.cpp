@@ -113,9 +113,8 @@ void cataimgui::client::process_input( void *input )
             imtui_events.push_back( std::pair<int, ImTui::mouse_event>( KEY_MOUSE, new_mouse_event ) );
         } else {
             int ch = curses_input->get_first_input();
-            if(ch != UNKNOWN_UNICODE)
-            {
-                imtui_events.push_back( std::pair<int, ImTui::mouse_event>(ch, new_mouse_event ) );
+            if( ch != UNKNOWN_UNICODE ) {
+                imtui_events.push_back( std::pair<int, ImTui::mouse_event>( ch, new_mouse_event ) );
             }
         }
     }
@@ -632,7 +631,8 @@ void cataimgui::popup::draw()
 #else
     ImGui::SetNextWindowSize( { 50, 0 } );
 #endif
-    ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f,0.5f));
+    ImGui::SetNextWindowPos( ImVec2( ImGui::GetIO().DisplaySize.x * 0.5f,
+                                     ImGui::GetIO().DisplaySize.y * 0.5f ), ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
 
     if( is_modal ) {
         if( ImGui::BeginPopupModal( id.c_str(), &is_open, ImGuiWindowFlags_AlwaysAutoResize ) ) {

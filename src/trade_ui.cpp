@@ -170,10 +170,9 @@ trade_ui::trade_result_t trade_ui::perform_trade()
             _queue.pop();
             _process( ev );
         }
-        if(!no_auto_cpane_switch)
-        {
+        if( !no_auto_cpane_switch ) {
             for( int new_cpane = 0; new_cpane < 2;
-                new_cpane++ ) { // selected entry belongs to this pane? break - we've figured out the selected pane
+                 new_cpane++ ) { // selected entry belongs to this pane? break - we've figured out the selected pane
                 if( _panes[new_cpane]->mouse_hovered_entry != nullptr &&
                     _panes[new_cpane]->mouse_hovered_entry->is_item() ) {
                     _cpane = new_cpane;
@@ -348,7 +347,7 @@ trade_selector::trade_selector( trade_ui *parent, Character &u,
     _ctxt_trade.register_action( "MOUSE_MOVE" );
 
     _ctxt_trade.register_action( "ANY_INPUT" );
-    _ctxt_trade.set_timeout(0);
+    _ctxt_trade.set_timeout( 0 );
     // duplicate this action in the parent ctxt so it shows up in the keybindings menu
     // CANCEL and OK are already set in inventory_selector
     ctxt.register_action( ACTION_SWITCH_PANES );
