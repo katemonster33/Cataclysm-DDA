@@ -160,24 +160,25 @@ trade_ui::trade_result_t trade_ui::perform_trade()
 {
     _exit = false;
     _traded = false;
-    inventory_entry *last_focused_entry = nullptr;
     while( !_exit ) {
-#if !(defined(WIN32) || defined(TILES))
-        ui_adaptor::redraw_all_invalidated( true );
-#endif
+        bool no_auto_cpane_switch = false;
         _panes[_cpane]->execute();
 
         while( !_queue.empty() ) {
+            no_auto_cpane_switch = true;
             event const ev = _queue.front();
             _queue.pop();
             _process( ev );
         }
-        for( int new_cpane = 0; new_cpane < 2;
-             new_cpane++ ) { // selected entry belongs to this pane? break - we've figured out the selected pane
-            if( _panes[new_cpane]->mouse_hovered_entry != nullptr &&
-                _panes[new_cpane]->mouse_hovered_entry->is_item() ) {
-                _cpane = new_cpane;
-                break;
+        if(!no_auto_cpane_switch)
+        {
+            for( int new_cpane = 0; new_cpane < 2;
+                new_cpane++ ) { // selected entry belongs to this pane? break - we've figured out the selected pane
+                if( _panes[new_cpane]->mouse_hovered_entry != nullptr &&
+                    _panes[new_cpane]->mouse_hovered_entry->is_item() ) {
+                    _cpane = new_cpane;
+                    break;
+                }
             }
         }
     }
@@ -347,6 +348,7 @@ trade_selector::trade_selector( trade_ui *parent, Character &u,
     _ctxt_trade.register_action( "MOUSE_MOVE" );
 
     _ctxt_trade.register_action( "ANY_INPUT" );
+    _ctxt_trade.set_timeout(0);
     // duplicate this action in the parent ctxt so it shows up in the keybindings menu
     // CANCEL and OK are already set in inventory_selector
     ctxt.register_action( ACTION_SWITCH_PANES );
@@ -371,6 +373,9 @@ void trade_selector::execute()
     columns[0]->on_activate();
 
     while( !exit ) {
+#if !(defined(WIN32) || defined(TILES))
+        ui_adaptor::redraw_all_invalidated( true );
+#endif
         std::string const &action = _ctxt_trade.handle_input();
         if( !is_open ) {
             break;
