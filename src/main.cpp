@@ -166,9 +166,7 @@ void exit_handler( int s )
         } else
 #endif
         {
-            if( imclient ) {
-                delete imclient;
-            }
+            delete imclient;
             exit( exit_status );
         }
     }

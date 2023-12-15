@@ -543,7 +543,6 @@ void refresh_display()
         return;
     }
 
-    imclient->new_frame();
     ui_adaptor::redraw_all_invalidated( true );
 
     // Select default target (the window), copy rendered buffer
@@ -564,7 +563,6 @@ void refresh_display()
     }
     draw_virtual_joystick();
 #endif
-    imclient->end_frame();
     SDL_RenderPresent( renderer.get() );
     SetRenderTarget( renderer, display_buffer );
 }
