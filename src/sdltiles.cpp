@@ -431,8 +431,8 @@ static void WinCreate()
         geometry = std::make_unique<DefaultGeometryRenderer>();
     }
 
-    cataimgui::client::sdl_renderer = renderer_nonconst;
-    cataimgui::client::sdl_window = win_nonconst;
+    cataimgui::client::sdl_renderer = renderer.get();
+    cataimgui::client::sdl_window = window.get();
     imclient = new cataimgui::client();
 
     //io.Fonts->AddFontDefault();
@@ -3515,6 +3515,9 @@ static void CheckMessages()
         ui_manager::invalidate( rectangle<point>( point_zero, point( WindowWidth, WindowHeight ) ), false );
         ui_manager::redraw_invalidated();
     }
+    if( ui_adaptor::has_imgui() ) {
+        needupdate = true;
+    }
     if( needupdate ) {
         try_sdl_update();
     }
@@ -3837,7 +3840,7 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
     // we can skip screen update if `needupdate` is false to improve performance during mouse
     // move events.
     wnoutrefresh( catacurses::stdscr );
-    if( needupdate ) {
+    if( needupdate || ui_adaptor::has_imgui() ) {
         refresh_display();
     }
 
@@ -3950,6 +3953,17 @@ static window_dimensions get_window_dimensions( const catacurses::window &win,
     dim.window_size_pixel.y = dim.window_size_cell.y * dim.scaled_font_size.y;
 
     return dim;
+}
+
+
+int get_window_width()
+{
+    return WindowWidth;
+}
+
+int get_window_height()
+{
+    return WindowHeight;
 }
 
 window_dimensions get_window_dimensions( const catacurses::window &win )

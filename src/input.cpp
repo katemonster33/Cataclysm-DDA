@@ -1260,7 +1260,13 @@ const std::string &input_context::handle_input( const int timeout )
         // enters something proper.
     }
     inp_mngr.set_timeout( old_timeout );
-    return *result;
+    if( next_action.type == input_event_t::error && !action_override.empty() ) {
+        action_override_old = action_override;
+        action_override = "";
+        return action_override_old;
+    } else {
+        return *result;
+    }
 }
 
 void input_context::register_directions()

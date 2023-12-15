@@ -899,7 +899,7 @@ endif
 IMGUI_SOURCES = src/third-party/imgui/imgui.cpp src/third-party/imgui/imgui_demo.cpp src/third-party/imgui/imgui_draw.cpp src/third-party/imgui/imgui_tables.cpp src/third-party/imgui/imgui_widgets.cpp
 
 ifeq ($(SDL), 1)
-	IMGUI_SOURCES += src/third-party/imgui/imgui_impl_sdl2.cpp src/third-party/imgui/imgui_impl_sdlrenderer.cpp
+	IMGUI_SOURCES += src/third-party/imgui/imgui_impl_sdl2.cpp src/third-party/imgui/imgui_impl_sdlrenderer2.cpp
 else 
 	IMGUI_SOURCES += src/third-party/imtui/imtui-impl-ncurses.cpp src/third-party/imtui/imtui-impl-text.cpp
   OTHERS += -DIMTUI

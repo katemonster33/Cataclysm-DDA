@@ -25,19 +25,22 @@ static std::optional<SDL_Rect> prev_clip_rect;
 #endif
 static ui_stack_t ui_stack;
 
-ui_adaptor::ui_adaptor() : disabling_uis_below( false ), is_debug_message_ui( false ),
+ui_adaptor::ui_adaptor() : is_imgui( false ), disabling_uis_below( false ),
+    is_debug_message_ui( false ),
     invalidated( false ), deferred_resize( false )
 {
     ui_stack.emplace_back( *this );
 }
 
-ui_adaptor::ui_adaptor( ui_adaptor::disable_uis_below ) : disabling_uis_below( true ),
+ui_adaptor::ui_adaptor( ui_adaptor::disable_uis_below ) : is_imgui( false ),
+    disabling_uis_below( true ),
     is_debug_message_ui( false ), invalidated( false ), deferred_resize( false )
 {
     ui_stack.emplace_back( *this );
 }
 
-ui_adaptor::ui_adaptor( ui_adaptor::debug_message_ui ) : disabling_uis_below( true ),
+ui_adaptor::ui_adaptor( ui_adaptor::debug_message_ui ) : is_imgui( false ),
+    disabling_uis_below( true ),
     is_debug_message_ui( true ), invalidated( false ), deferred_resize( false )
 {
     cata_assert( !showing_debug_message );
@@ -314,12 +317,22 @@ void ui_adaptor::invalidate( const rectangle<point> &rect, const bool reenable_u
     invalidation_consistency_and_optimization();
 }
 
-void ui_adaptor::redraw()
+bool ui_adaptor::has_imgui()
+{
+    for( auto ui : ui_stack ) {
+        if( ui.get().is_imgui ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void ui_adaptor::redraw_all()
 {
     if( !ui_stack.empty() ) {
         ui_stack.back().get().invalidated = true;
     }
-    redraw_invalidated();
+    redraw_all_invalidated();
 }
 
 #if !(defined(TILES) || defined(_WIN32))
@@ -358,6 +371,7 @@ void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
                 break;
             }
         }
+        bool imgui_is_on_top = ui_stack.back().get().is_imgui;
 
         // Avoid a copy if possible to improve performance. `ui_stack_orig`
         // always contains the original UI stack, and `first_enabled` always points
@@ -401,7 +415,7 @@ void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
         if( !restart_redrawing ) {
             for( auto it = first_enabled; !needs_redraw && it != ui_stack_orig->end(); ++it ) {
                 const ui_adaptor &ui = *it;
-                if( ui.invalidated && ui.redraw_cb ) {
+                if( ( ui.invalidated && ui.redraw_cb ) || ( draw_imgui && ui.is_imgui ) ) {
                     needs_redraw = true;
                 }
             }
@@ -432,6 +446,9 @@ void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
                         ui.invalidated = false;
                     }
                 }
+                if( ui.is_imgui == draw_imgui && ( !ui.is_imgui || imgui_is_on_top ) ) {
+                    ui.redraw();
+                }
             }
             if( !restart_redrawing && cursor_pos.has_value() ) {
                 restore_cursor( cursor_pos.value() );
@@ -446,6 +463,7 @@ void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
 #endif
 }
 
+
 void ui_adaptor::screen_resized()
 {
     // Always mark every UI for resize even if it is below another UI with
@@ -454,7 +472,7 @@ void ui_adaptor::screen_resized()
     for( ui_adaptor &ui : ui_stack ) {
         ui.deferred_resize = true;
     }
-    redraw();
+    redraw_all();
 }
 
 background_pane::background_pane()
@@ -479,12 +497,12 @@ void invalidate( const rectangle<point> &rect, const bool reenable_uis_below )
 
 void redraw()
 {
-    ui_adaptor::redraw();
+    ui_adaptor::redraw_all();
 }
 
 void redraw_invalidated()
 {
-    ui_adaptor::redraw_invalidated();
+    ui_adaptor::redraw_all_invalidated();
 }
 
 void screen_resized()

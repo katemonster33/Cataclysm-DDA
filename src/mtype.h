@@ -163,7 +163,8 @@ struct mtype {
         mon_action_defend sp_defense;
     private:
         ascii_art_id picture_id;
-        enum_bitset<m_flag> flags;
+        std::unordered_set<mon_flag_id> flags;
+        std::set<mon_flag_str_id> pre_flags_; // used only for initial loading
     public:
         mtype_id id;
         mfaction_str_id default_faction;
@@ -258,7 +259,6 @@ struct mtype {
         pet_food_data petfood;
     private:
 
-
         behavior::node_t goals;
 
     public:
@@ -323,7 +323,6 @@ struct mtype {
         // Vision range is linearly scaled depending on lighting conditions
         int vision_day = 40;    /** vision range in bright light */
         int vision_night = 1;   /** vision range in total darkness */
-
 
         unsigned int def_chance; // How likely a special "defensive" move is to trigger (0-100%, default 0)
         // Monster's ability to destroy terrain and vehicles
