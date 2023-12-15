@@ -45,6 +45,16 @@ static void curses_check_result( const int result, const int expected, const cha
     }
 }
 
+int get_window_width()
+{
+    return TERMX;
+}
+
+int get_window_height()
+{
+    return TERMY;
+}
+
 catacurses::window catacurses::newwin( const int nlines, const int ncols, const point &begin )
 {
     // TODO: check for errors
@@ -305,7 +315,6 @@ void catacurses::resizeterm()
         catacurses::doupdate();
     }
 }
-
 // init_interface is defined in another cpp file, depending on build type:
 // wincurse.cpp for Windows builds without SDL and sdltiles.cpp for SDL builds.
 void catacurses::init_interface()
@@ -389,7 +398,7 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
             const int prev_timeout = input_timeout;
             set_timeout( 0 );
             do {
-                newch = getch();
+                newch = wgetch( stdscr );
             } while( newch != ERR && newch == key );
             set_timeout( prev_timeout );
             // If we read a different character than the one we're going to act on, re-queue it.
@@ -416,7 +425,7 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
                     rval.add_input( MouseInput::LeftButtonReleased );
                 } else if( event.bstate & BUTTON1_PRESSED ) {
                     rval.add_input( MouseInput::LeftButtonPressed );
-                } else if( event.bstate & BUTTON3_CLICKED ) {
+                } else if( event.bstate & BUTTON3_CLICKED || event.bstate & BUTTON3_RELEASED ) {
                     rval.add_input( MouseInput::RightButtonReleased );
                     // If curses version is prepared for a 5-button mouse, enable mousewheel
 #if defined(BUTTON5_PRESSED)
@@ -491,17 +500,17 @@ void input_manager::set_timeout( const int delay )
 
 nc_color nc_color::from_color_pair_index( const int index )
 {
-    return nc_color( COLOR_PAIR( index ) );
+    return nc_color( COLOR_PAIR( index ), index );
 }
 
 int nc_color::to_color_pair_index() const
 {
-    return PAIR_NUMBER( attribute_value );
+    return ( attribute_value & 0x03fe0000 ) >> 17;
 }
 
 nc_color nc_color::bold() const
 {
-    return nc_color( attribute_value | A_BOLD );
+    return nc_color( attribute_value | A_BOLD, index );
 }
 
 bool nc_color::is_bold() const
@@ -511,7 +520,7 @@ bool nc_color::is_bold() const
 
 nc_color nc_color::blink() const
 {
-    return nc_color( attribute_value | A_BLINK );
+    return nc_color( attribute_value | A_BLINK, index );
 }
 
 bool nc_color::is_blink() const

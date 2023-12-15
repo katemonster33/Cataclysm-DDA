@@ -147,7 +147,7 @@ RGBTuple color_loader<RGBTuple>::from_rgb( const int r, const int g, const int b
 #else
 #include "sdl_utils.h"
 #include <imgui/imgui_impl_sdl2.h>
-#include <imgui/imgui_impl_sdlrenderer.h>
+#include <imgui/imgui_impl_sdlrenderer2.h>
 
 SDL_Renderer *cataimgui::client::sdl_renderer = nullptr;
 SDL_Window *cataimgui::client::sdl_window = nullptr;
@@ -164,7 +164,7 @@ cataimgui::client::client()
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     ImGui_ImplSDL2_InitForSDLRenderer( sdl_window, sdl_renderer );
-    ImGui_ImplSDLRenderer_Init( sdl_renderer );
+    ImGui_ImplSDLRenderer2_Init( sdl_renderer );
 }
 
 cataimgui::client::~client()
@@ -174,7 +174,7 @@ cataimgui::client::~client()
 
 void cataimgui::client::new_frame()
 {
-    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
 
     ImGui::NewFrame();
@@ -183,7 +183,7 @@ void cataimgui::client::new_frame()
 void cataimgui::client::end_frame()
 {
     ImGui::Render();
-    ImGui_ImplSDLRenderer_RenderDrawData( ImGui::GetDrawData() );
+    ImGui_ImplSDLRenderer2_RenderDrawData( ImGui::GetDrawData() );
 }
 
 void cataimgui::client::process_input( void *input )

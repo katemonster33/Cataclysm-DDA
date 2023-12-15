@@ -3,6 +3,7 @@
 
 #include "font_loader.h"
 #include "output.h"
+#include "imgui/imgui.h"
 #include "sdl_utils.h"
 
 #if defined(_WIN32)
@@ -296,6 +297,11 @@ CachedTTFFont::CachedTTFFont(
         throw std::runtime_error( TTF_GetError() );
     }
     TTF_SetFontStyle( font.get(), TTF_STYLE_NORMAL );
+}
+
+const ImFont *CachedTTFFont::Get_ImGuiFont()
+{
+    return imgui_font;
 }
 
 SDL_Texture_Ptr CachedTTFFont::create_glyph( const SDL_Renderer_Ptr &renderer,
