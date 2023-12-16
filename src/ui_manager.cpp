@@ -425,7 +425,7 @@ void ui_adaptor::redraw_invalidated( )
             std::optional<point> cursor_pos;
             for( auto it = first_enabled; !restart_redrawing && it != ui_stack_orig->end(); ++it ) {
                 ui_adaptor &ui = *it;
-                if( ui.invalidated ) {
+                if( ui.invalidated || ui.is_imgui ) {
                     if( ui.redraw_cb ) {
                         ui.default_cursor();
                         ui.redraw_cb( ui );
