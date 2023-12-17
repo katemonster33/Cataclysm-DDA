@@ -327,17 +327,17 @@ bool ui_adaptor::has_imgui()
     return false;
 }
 
-void ui_adaptor::redraw_all()
+void ui_adaptor::redraw()
 {
     if( !ui_stack.empty() ) {
         ui_stack.back().get().invalidated = true;
     }
-    redraw_all_invalidated();
+    redraw_invalidated();
 }
 
 extern cataimgui::client *imclient;
 
-void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
+void ui_adaptor::redraw_invalidated( bool draw_imgui )
 {
     if( test_mode || ui_stack.empty() ) {
         return;
@@ -440,8 +440,10 @@ void ui_adaptor::redraw_all_invalidated( bool draw_imgui )
                         ui.invalidated = false;
                     }
                 }
-                if( ui.is_imgui == draw_imgui && ( !ui.is_imgui || imgui_is_on_top ) ) {
-                    ui.redraw();
+                if( ui.is_imgui && draw_imgui && ( !ui.is_imgui || imgui_is_on_top ) ) {
+                    if( ui.redraw_cb ) {
+                        ui.redraw_cb( ui );
+                    }
                 }
             }
             if( !restart_redrawing && cursor_pos.has_value() ) {
@@ -462,7 +464,7 @@ void ui_adaptor::screen_resized()
     for( ui_adaptor &ui : ui_stack ) {
         ui.deferred_resize = true;
     }
-    redraw_all();
+    redraw();
 }
 
 background_pane::background_pane()
@@ -487,12 +489,12 @@ void invalidate( const rectangle<point> &rect, const bool reenable_uis_below )
 
 void redraw()
 {
-    ui_adaptor::redraw_all();
+    ui_adaptor::redraw();
 }
 
 void redraw_invalidated()
 {
-    ui_adaptor::redraw_all_invalidated();
+    ui_adaptor::redraw_invalidated();
 }
 
 void screen_resized()

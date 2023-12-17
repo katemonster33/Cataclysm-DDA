@@ -411,18 +411,19 @@ class cataimgui::window_impl : public ui_adaptor
         friend class cataimgui::window;
         cataimgui::window *win_base;
         bool is_resized;
+        std::unique_ptr<ui_adaptor> window_adaptor;
     public:
         explicit window_impl( cataimgui::window *win ) {
             win_base = win;
             is_resized = true;
-        }
-
-        void redraw() override {
-            win_base->draw();
-        }
-
-        void resized() override {
-            is_resized = true;
+            window_adaptor.reset( new ui_adaptor() );
+            window_adaptor->is_imgui = true;
+            window_adaptor->on_redraw( [this]( ui_adaptor & ) {
+                win_base->draw();
+            } );
+            window_adaptor->on_screen_resize( [this]( ui_adaptor & ) {
+                is_resized = true;
+            } );
         }
 };
 
@@ -775,11 +776,11 @@ void cataimgui::string_input_box::draw_controls()
         ImGui::SetKeyboardFocusHere( 0 );
     }
     ImGui::InputText( "##inputtext", input.data(), input.max_size() );
-    if( ImGui::Button( "OK" ) || ImGui::IsKeyDown( ImGuiKey_Enter ) ) {
+    if( ImGui::Button( _( "OK" ) ) || ImGui::IsKeyDown( ImGuiKey_Enter ) ) {
         result = dialog_result::OKClicked;
     }
     ImGui::SameLine();
-    if( ImGui::Button( "Cancel" ) || ImGui::IsKeyDown( ImGuiKey_Escape ) ) {
+    if( ImGui::Button( _( "Cancel" ) ) || ImGui::IsKeyDown( ImGuiKey_Escape ) ) {
         result = dialog_result::CancelClicked;
     }
 }

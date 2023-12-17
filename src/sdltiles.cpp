@@ -543,7 +543,7 @@ void refresh_display()
         return;
     }
 
-    ui_adaptor::redraw_all_invalidated( true );
+    ui_adaptor::redraw_invalidated( true );
 
     // Select default target (the window), copy rendered buffer
     // there, present it, select the buffer as target again.

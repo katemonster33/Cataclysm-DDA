@@ -212,8 +212,8 @@ class ui_adaptor
         /* See the `ui_manager` namespace */
         static void invalidate( const rectangle<point> &rect, bool reenable_uis_below );
         static bool has_imgui();
-        static void redraw_all();
-        static void redraw_all_invalidated( bool draw_imgui = false );
+        static void redraw();
+        static void redraw_invalidated( bool draw_imgui = false );
         static void screen_resized();
     private:
         static void invalidation_consistency_and_optimization();
@@ -238,9 +238,6 @@ class ui_adaptor
 
         mutable bool invalidated;
         mutable bool deferred_resize;
-    protected:
-        virtual void redraw() {}
-        virtual void resized() {}
 };
 
 /**
