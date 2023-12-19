@@ -335,7 +335,7 @@ void ui_adaptor::redraw()
     redraw_invalidated();
 }
 
-extern cataimgui::client *imclient;
+extern std::unique_ptr<cataimgui::client> imclient;
 
 void ui_adaptor::redraw_invalidated( bool draw_imgui )
 {
@@ -440,7 +440,7 @@ void ui_adaptor::redraw_invalidated( bool draw_imgui )
                         ui.invalidated = false;
                     }
                 }
-                if( ui.is_imgui && draw_imgui && ( !ui.is_imgui || imgui_is_on_top ) ) {
+                if( ui.is_imgui && draw_imgui && imgui_is_on_top ) {
                     if( ui.redraw_cb ) {
                         ui.redraw_cb( ui );
                     }

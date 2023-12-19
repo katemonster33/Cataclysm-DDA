@@ -36,7 +36,7 @@
 #include "output.h"
 #include "ui_manager.h"
 
-cataimgui::client *imclient = nullptr;
+std::unique_ptr<cataimgui::client> imclient;
 
 static void curses_check_result( const int result, const int expected, const char *const /*name*/ )
 {
@@ -336,7 +336,7 @@ void catacurses::init_interface()
     set_escdelay( 10 ); // Make Escape actually responsive
     // TODO: error checking
     start_color();
-    imclient = new cataimgui::client();
+    imclient = std::make_unique<cataimgui::client>();
     init_colors();
 #if !defined(__CYGWIN__)
     // ncurses mouse registration

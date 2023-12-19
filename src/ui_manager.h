@@ -98,7 +98,7 @@ class ui_adaptor
         explicit ui_adaptor( debug_message_ui );
         ui_adaptor( const ui_adaptor &rhs ) = delete;
         ui_adaptor( ui_adaptor &&rhs ) = delete;
-        virtual ~ui_adaptor();
+        ~ui_adaptor();
 
         ui_adaptor &operator=( const ui_adaptor &rhs ) = delete;
         ui_adaptor &operator=( ui_adaptor &&rhs ) = delete;

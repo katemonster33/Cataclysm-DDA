@@ -60,7 +60,7 @@
 #   include <unistd.h> // getpid()
 #endif
 
-extern cataimgui::client *imclient;
+extern std::unique_ptr<cataimgui::client> imclient;
 
 #if defined(PREFIX)
 #   undef PREFIX
@@ -166,7 +166,7 @@ void exit_handler( int s )
         } else
 #endif
         {
-            delete imclient;
+            imclient.reset();
             exit( exit_status );
         }
     }

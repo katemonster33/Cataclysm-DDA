@@ -74,7 +74,7 @@
 #include "wcwidth.h"
 #include "cata_imgui.h"
 
-cataimgui::client *imclient = nullptr;
+std::unique_ptr<cataimgui::client> imclient;
 
 #if defined(__linux__)
 #   include <cstdlib> // getenv()/setenv()
@@ -433,7 +433,7 @@ static void WinCreate()
 
     cataimgui::client::sdl_renderer = renderer.get();
     cataimgui::client::sdl_window = window.get();
-    imclient = new cataimgui::client();
+    imclient = std::make_unique<cataimgui::client>();
 
     //io.Fonts->AddFontDefault();
     //io.Fonts->Build();
@@ -444,7 +444,7 @@ static void WinDestroy()
 #if defined(__ANDROID__)
     touch_joystick.reset();
 #endif
-    delete imclient;
+    imclient.reset();
     shutdown_sound();
     tilecontext.reset();
     gamepad::quit();
