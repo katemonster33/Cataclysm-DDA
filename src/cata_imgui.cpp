@@ -93,26 +93,26 @@ void cataimgui::client::process_input( void *input )
             new_mouse_event.bstate = 0;
             for( int input_raw_key : curses_input->sequence ) {
                 switch( static_cast<MouseInput>( input_raw_key ) ) {
-                    case MouseInput::LeftButtonPressed:
-                        new_mouse_event.bstate |= BUTTON1_PRESSED;
-                        break;
-                    case MouseInput::LeftButtonReleased:
-                        new_mouse_event.bstate |= BUTTON1_RELEASED;
-                        break;
-                    case MouseInput::RightButtonPressed:
-                        new_mouse_event.bstate |= BUTTON3_PRESSED;
-                        break;
-                    case MouseInput::RightButtonReleased:
-                        new_mouse_event.bstate |= BUTTON3_RELEASED;
-                        break;
-                    case MouseInput::ScrollWheelUp:
-                        new_mouse_event.bstate |= BUTTON4_PRESSED;
-                        break;
-                    case MouseInput::ScrollWheelDown:
-                        new_mouse_event.bstate |= BUTTON5_PRESSED;
-                        break;
-                    default:
-                        break;
+                case MouseInput::LeftButtonPressed:
+                    new_mouse_event.bstate |= BUTTON1_PRESSED;
+                    break;
+                case MouseInput::LeftButtonReleased:
+                    new_mouse_event.bstate |= BUTTON1_RELEASED;
+                    break;
+                case MouseInput::RightButtonPressed:
+                    new_mouse_event.bstate |= BUTTON3_PRESSED;
+                    break;
+                case MouseInput::RightButtonReleased:
+                    new_mouse_event.bstate |= BUTTON3_RELEASED;
+                    break;
+                case MouseInput::ScrollWheelUp:
+                    new_mouse_event.bstate |= BUTTON4_PRESSED;
+                    break;
+                case MouseInput::ScrollWheelDown:
+                    new_mouse_event.bstate |= BUTTON5_PRESSED;
+                    break;
+                default:
+                    break;
                 }
             }
             imtui_events.push_back( std::pair<int, ImTui::mouse_event>( KEY_MOUSE, new_mouse_event ) );
@@ -316,7 +316,7 @@ int cataimgui::window::draw_item_info_data( item_info_data &data )
     }
     // If type name is set, and not already contained in item name, output it too
     if( !data.get_type_name().empty() &&
-        data.get_item_name().find( data.get_type_name() ) == std::string::npos ) {
+            data.get_item_name().find( data.get_type_name() ) == std::string::npos ) {
         buffer += data.get_type_name() + "\n";
     }
     for( unsigned int i = 0; i < data.padding; i++ ) {
@@ -373,8 +373,8 @@ int cataimgui::window::draw_item_info_data( item_info_data &data )
         action = ctxt.handle_input();
 
         if( action == "CONFIRM" || action == "QUIT" ||
-            ( data.any_input && action == "ANY_INPUT" &&
-              !ctxt.get_raw_input().sequence.empty() ) ) {
+                ( data.any_input && action == "ANY_INPUT" &&
+                  !ctxt.get_raw_input().sequence.empty() ) ) {
             break;
         }
     }
@@ -408,23 +408,23 @@ bool cataimgui::window::is_child_window_navigated()
 
 class cataimgui::window_impl : public ui_adaptor
 {
-        friend class cataimgui::window;
-        cataimgui::window *win_base;
-        bool is_resized;
-        std::unique_ptr<ui_adaptor> window_adaptor;
-    public:
-        explicit window_impl( cataimgui::window *win ) {
-            win_base = win;
+    friend class cataimgui::window;
+    cataimgui::window *win_base;
+    bool is_resized;
+    std::unique_ptr<ui_adaptor> window_adaptor;
+public:
+    explicit window_impl( cataimgui::window *win ) {
+        win_base = win;
+        is_resized = true;
+        window_adaptor.reset( new ui_adaptor() );
+        window_adaptor->is_imgui = true;
+        window_adaptor->on_redraw( [this]( ui_adaptor & ) {
+            win_base->draw();
+        } );
+        window_adaptor->on_screen_resize( [this]( ui_adaptor & ) {
             is_resized = true;
-            window_adaptor.reset( new ui_adaptor() );
-            window_adaptor->is_imgui = true;
-            window_adaptor->on_redraw( [this]( ui_adaptor & ) {
-                win_base->draw();
-            } );
-            window_adaptor->on_screen_resize( [this]( ui_adaptor & ) {
-                is_resized = true;
-            } );
-        }
+        } );
+    }
 };
 
 cataimgui::window::window( int window_flags )
@@ -632,14 +632,16 @@ void cataimgui::popup::set_draw_callback( const std::function<bool()> &callback 
 void cataimgui::popup::draw()
 {
     ImGui::PushOverrideID( popup_id );
-#if defined(TILES) || defined(WIN32)
-    ImGui::SetNextWindowSize( { 400, 0 } );
-#else
-    ImGui::SetNextWindowSize( { 50, 0 } );
-#endif
-    ImGui::SetNextWindowPos( ImVec2( ImGui::GetIO().DisplaySize.x * 0.5f,
-                                     ImGui::GetIO().DisplaySize.y * 0.5f ), ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
-
+    auto bounds = get_bounds();
+    if(bounds.x >=0 || bounds.y >= 0) {
+        ImGui::SetNextWindowPos( {bounds.x, bounds.y} );
+    } else {
+        ImGui::SetNextWindowPos( ImVec2( ImGui::GetIO().DisplaySize.x * 0.5f,
+                                         ImGui::GetIO().DisplaySize.y * 0.5f ), ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
+    }
+    if(bounds.h >= 0 || bounds.w >= 0) {
+        ImGui::SetNextWindowSize({bounds.h, bounds.w});
+    }
     if( is_modal ) {
         if( ImGui::BeginPopupModal( id.c_str(), &is_open, ImGuiWindowFlags_AlwaysAutoResize ) ) {
             draw_controls();
@@ -705,6 +707,15 @@ void cataimgui::message_box::draw_mbox_btn( const std::string &text,
     if( ImGui::Button( text.c_str() ) ) {
         result = result_if_clicked;
     }
+}
+
+cataimgui::bounds cataimgui::message_box::get_bounds()
+{
+#if defined(TILES) || defined(WIN32)
+    return { -1, -1, 400, 0 };
+#else
+    return { -1, -1, 50, 0 };
+#endif
 }
 
 void cataimgui::message_box::draw_controls()
