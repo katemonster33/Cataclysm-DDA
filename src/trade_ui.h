@@ -22,21 +22,24 @@ class npc;
 class trade_ui;
 struct point;
 
+namespace cataimgui
+{
+struct bounds;
+} // namespace cataimgui
+
 class trade_selector : public inventory_drop_selector
 {
     public:
         explicit trade_selector( trade_ui *parent, Character &u,
                                  inventory_selector_preset const &preset = default_preset,
-                                 std::string const &selection_column_title = _( "TRADE OFFER" ),
-                                 // NOLINTNEXTLINE(cata-use-named-point-constants)
-                                 point const &size = { -1, -1 }, point const &origin = { -1, -1 } );
+                                 std::string const &selection_column_title = _( "TRADE OFFER" ) );
         using entry_t = std::pair<item_location, int>;
         using select_t = std::vector<entry_t>;
         void execute();
         void on_toggle() override;
         select_t to_trade() const;
-        void resize( point const &size, point const &origin );
-        shared_ptr_fast<ui_adaptor> get_ui() const;
+        void resize( const cataimgui::bounds &pane_bounds );
+        std::vector<inventory_entry *> get_items();
         input_context const *get_ctxt() const;
 
         static constexpr char const *ACTION_AUTOBALANCE = "AUTO_BALANCE";
@@ -47,7 +50,6 @@ class trade_selector : public inventory_drop_selector
 
     private:
         trade_ui *_parent;
-        shared_ptr_fast<ui_adaptor> _ui;
         input_context _ctxt_trade;
 };
 
@@ -64,7 +66,7 @@ class trade_preset : public inventory_selector_preset
         Character const &_u, &_trader;
 };
 
-class trade_ui
+class trade_ui : public cataimgui::window
 {
     public:
         using pane_t = trade_selector;
@@ -93,10 +95,12 @@ class trade_ui
         void autobalance();
         void bank_balance();
         void resize();
-
-        constexpr static int header_size = 5;
+    protected:
+        void draw_controls() override;
+        cataimgui::bounds get_bounds() override;
 
     private:
+        point window_size;
         constexpr static std::size_t npanes = 2;
         using panecont_t = std::array<std::unique_ptr<pane_t>, npanes>;
         using values_t = std::array<currency_t, npanes>;
@@ -118,12 +122,9 @@ class trade_ui
         currency_t _bank = 0;
         currency_t _delta_bank = 0;
         std::string const _title;
-        catacurses::window _header_w;
-        ui_adaptor _header_ui;
 
         void _process( event const &ev );
         bool _confirm_trade() const;
-        void _draw_header();
 };
 
 #endif // CATA_SRC_TRADE_UI_H
