@@ -423,6 +423,7 @@ class cataimgui::window_impl : public ui_adaptor
             } );
             window_adaptor->on_screen_resize( [this]( ui_adaptor & ) {
                 is_resized = true;
+                win_base->on_resized();
             } );
         }
 };
@@ -493,7 +494,10 @@ void cataimgui::window::draw()
         }
         ImGui::EndChild();
     } else {
-        if( cached_bounds.x >= 0 && cached_bounds.y >= 0 ) {
+        if( cached_bounds.x == -1 && cached_bounds.y == -1 )             {
+            ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+            ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, { 0.5, 0.5 } );
+        } else if( cached_bounds.x >= 0 && cached_bounds.y >= 0 ) {
             ImGui::SetNextWindowPos( { cached_bounds.x, cached_bounds.y } );
         }
         if( cached_bounds.h > 0 && cached_bounds.w > 0 ) {

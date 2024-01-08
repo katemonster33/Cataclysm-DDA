@@ -93,6 +93,7 @@ class window
         void show_popup_async( const std::shared_ptr<popup> &next_popup );
         dialog_result show_popup( const std::shared_ptr<popup> &next_popup );
         virtual void draw();
+        virtual void on_resized() { }
         bool is_resized();
 
     protected:

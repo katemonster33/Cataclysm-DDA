@@ -15,6 +15,7 @@
 #include "input.h"
 #include "point.h"
 #include "string_formatter.h"
+#include "pimpl.h"
 
 class ui_adaptor;
 
@@ -35,8 +36,10 @@ class ui_adaptor;
  *
  * Please refer to documentation of individual functions for detailed explanation.
  **/
+
 class query_popup
 {
+        friend class query_popup_impl;
     public:
         /**
          * Query result returned by `query_once` and `query`.
@@ -181,11 +184,6 @@ class query_popup
         query_popup &preferred_keyboard_mode( keyboard_mode mode );
 
         /**
-         * Draw the UI. An input context should be provided using `context()`
-         * for this function to properly generate option text.
-         **/
-        void show() const;
-        /**
          * Query once and return the result. In order for this method to return
          * valid results, the popup must either have at least one option, or
          * have `allow_cancel` or `allow_anykey` set to true. Otherwise
@@ -202,7 +200,7 @@ class query_popup
          * Create or get a ui_adaptor on the UI stack to handle redrawing and
          * resizing of the popup.
          */
-        std::shared_ptr<ui_adaptor> create_or_get_adaptor();
+        std::shared_ptr<query_popup_impl> create_or_get_impl();
 
     private:
         struct query_option {
@@ -233,7 +231,7 @@ class query_popup
             int width;
         };
 
-        std::weak_ptr<ui_adaptor> adaptor;
+        std::weak_ptr<query_popup_impl> p_impl;
 
         // UI caches
         mutable catacurses::window win;
@@ -246,7 +244,6 @@ class query_popup
                     const std::vector<query_option> &options,
                     int max_width, int horz_padding );
         void invalidate_ui() const;
-        void init() const;
 
         template <typename ...Args>
         static void assert_format( const std::string_view, Args &&... ) {
@@ -289,7 +286,7 @@ class static_popup : public query_popup
         static_popup();
 
     private:
-        std::shared_ptr<ui_adaptor> ui;
+        std::shared_ptr<query_popup_impl> ui;
 };
 
 #endif // CATA_SRC_POPUP_H
