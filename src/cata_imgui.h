@@ -20,6 +20,9 @@ struct bounds {
     float y;
     float w;
     float h;
+    bounds();
+    bounds( const bounds &other );
+    bounds( float x, float y, float w, float h );
 };
 
 enum class mbox_btn {
@@ -63,6 +66,7 @@ class client
 
 class window
 {
+
         friend class child_window;
         class window_impl *p_impl;
         std::shared_ptr<class popup> active_popup;
@@ -95,6 +99,10 @@ class window
         virtual void draw();
         virtual void on_resized() { }
         bool is_resized();
+        size_t get_text_width( const char *text );
+        size_t get_text_height( const char *text );
+        size_t str_width_to_pixels( size_t len );
+        size_t str_height_to_pixels( size_t len );
 
     protected:
         bool is_open;
@@ -103,6 +111,7 @@ class window
         virtual bounds get_bounds();
         virtual void draw_controls() = 0;
         int draw_item_info_data( item_info_data &data );
+        void mark_bounds_changed();
 
         void add_child( window *child );
 };

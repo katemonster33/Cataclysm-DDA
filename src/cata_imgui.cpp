@@ -198,6 +198,28 @@ void cataimgui::client::process_input( void *input )
 
 #endif
 
+
+cataimgui::bounds::bounds()
+{
+    x = y = w = h = 0.f;
+}
+
+cataimgui::bounds::bounds( const cataimgui::bounds &other )
+{
+    x = other.x;
+    y = other.y;
+    w = other.w;
+    h = other.h;
+}
+
+cataimgui::bounds::bounds( float x, float y, float w, float h )
+{
+    this->x = x;
+    this->y = y;
+    this->w = w;
+    this->h = h;
+}
+
 void cataimgui::window::draw_colored_text( std::string const &text, const nc_color &color,
         text_align alignment, float max_width, bool *is_selected, bool *is_focused, bool *is_hovered )
 {
@@ -471,6 +493,49 @@ bool cataimgui::window::is_resized()
     }
 }
 
+size_t cataimgui::window::get_text_width( const char *text )
+{
+#if defined(WIN32) || defined(TILES)
+    return ImGui::CalcTextSize( text ).x;
+#else
+    return strlen( text );
+#endif
+}
+
+size_t cataimgui::window::get_text_height( const char *text )
+{
+#if defined(WIN32) || defined(TILES)
+    return ImGui::CalcTextSize( "0" ).y * strlen( text );
+#else
+    return strlen( text );
+#endif
+}
+
+size_t cataimgui::window::str_width_to_pixels( size_t len )
+{
+#if defined(WIN32) || defined(TILES)
+    return ImGui::CalcTextSize( "0" ).x * len;
+#else
+    return len;
+#endif
+}
+
+size_t cataimgui::window::str_height_to_pixels( size_t len )
+{
+#if defined(WIN32) || defined(TILES)
+    return ImGui::CalcTextSize( "0" ).y * len;
+#else
+    return len;
+#endif
+}
+
+void cataimgui::window::mark_bounds_changed()
+{
+    if( p_impl ) {
+        p_impl->is_resized = true;
+    }
+}
+
 void cataimgui::window::draw()
 {
     if( !is_open ) {
@@ -500,7 +565,7 @@ void cataimgui::window::draw()
         } else if( cached_bounds.x >= 0 && cached_bounds.y >= 0 ) {
             ImGui::SetNextWindowPos( { cached_bounds.x, cached_bounds.y } );
         }
-        if( cached_bounds.h > 0 && cached_bounds.w > 0 ) {
+        if( cached_bounds.h > 0 || cached_bounds.w > 0 ) {
             ImGui::SetNextWindowSize( { cached_bounds.w, cached_bounds.h } );
         }
         if( ImGui::Begin( id.c_str(), &is_open, window_flags ) ) {
@@ -591,7 +656,7 @@ bool cataimgui::window::action_button( const std::string &action, const std::str
 
 cataimgui::bounds cataimgui::window::get_bounds()
 {
-    return { -1, -1, -1, -1 };
+    return cataimgui::bounds( -1.f, -1.f, -1.f, -1.f );
 }
 
 void cataimgui::window::add_child( cataimgui::window *child )
