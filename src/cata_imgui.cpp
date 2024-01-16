@@ -428,7 +428,7 @@ bool cataimgui::window::is_child_window_navigated()
     return GImGui->CurrentWindow->ChildId == GImGui->NavId;
 }
 
-class cataimgui::window_impl : public ui_adaptor
+class cataimgui::window_impl
 {
         friend class cataimgui::window;
         cataimgui::window *win_base;
@@ -471,7 +471,6 @@ cataimgui::window::window( cataimgui::window *parent, int window_flags ) : windo
 cataimgui::window::window( const std::string &title, int window_flags ) : window( window_flags )
 {
     p_impl = new cataimgui::window_impl( this );
-    p_impl->is_imgui = true;
     id = title;
     is_open = true;
 }
