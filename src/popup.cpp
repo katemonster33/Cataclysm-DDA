@@ -15,6 +15,8 @@
 
 class query_popup_impl : public cataimgui::window
 {
+        short keyboard_selected_option;
+        short mouse_selected_option;
         size_t msg_width;
         query_popup *parent;
     public:
@@ -22,19 +24,33 @@ class query_popup_impl : public cataimgui::window
                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar ) {
             msg_width = 400;
             this->parent = parent;
+            keyboard_selected_option = -1;
+            mouse_selected_option = -1;
         }
 
         void on_resized() override;
+        int get_keyboard_selected_option() {
+            return keyboard_selected_option;
+        }
+        int get_mouse_selected_option() {
+            return mouse_selected_option;
+        }
     protected:
         void draw_controls() override;
         cataimgui::bounds get_bounds() override {
-            return cataimgui::bounds( -1.f, -1.f,
-                                      float( msg_width ) + ( ImGui::GetStyle().WindowBorderSize * 2 ), -1.f );
+            if( parent->buttons.empty() ) {
+                return cataimgui::bounds( -1.f, -1.f, -1.f, -1.f );
+            } else {
+                return cataimgui::bounds( -1.f, -1.f,
+                                          float( msg_width ) + ( ImGui::GetStyle().WindowBorderSize * 2 ), -1.f );
+            }
         }
 };
 
 void query_popup_impl::draw_controls()
 {
+    mouse_selected_option = -1;
+    keyboard_selected_option = -1;
     if( !parent->win ) {
         on_resized();
     }
@@ -44,15 +60,28 @@ void query_popup_impl::draw_controls()
         draw_colored_text( parent->folded_msg[line], col, cataimgui::text_align::Left, msg_width );
     }
 
-    float x_pos = msg_width;
-    for( size_t ind = 0; ind < parent->buttons.size(); ++ind ) {
-        x_pos -= ( str_width_to_pixels( remove_color_tags( parent->buttons[ind].text ).length() ) +
-                   ( ImGui::GetStyle().FramePadding.x * 2 ) + ( ImGui::GetStyle().ItemSpacing.x ) );
-    }
-    ImGui::SetCursorPosX( x_pos );
-    for( size_t ind = 0; ind < parent->buttons.size(); ++ind ) {
-        ImGui::Button( remove_color_tags( parent->buttons[ind].text ).c_str() );
-        ImGui::SameLine();
+    if( !parent->buttons.empty() ) {
+        float x_pos = msg_width;
+        for( size_t ind = 0; ind < parent->buttons.size(); ++ind ) {
+            x_pos -= ( str_width_to_pixels( remove_color_tags( parent->buttons[ind].text ).length() ) +
+                       ( ImGui::GetStyle().FramePadding.x * 2 ) + ( ImGui::GetStyle().ItemSpacing.x ) );
+        }
+        ImGui::SetCursorPosX( x_pos );
+        for( size_t ind = 0; ind < parent->buttons.size(); ++ind ) {
+            ImGui::Button( remove_color_tags( parent->buttons[ind].text ).c_str() );
+            if( ImGui::IsItemHovered() ) {
+                mouse_selected_option = ind;
+            }
+            if( ImGui::IsItemFocused() ) {
+                keyboard_selected_option = ind;
+            }
+            ImGui::SameLine();
+        }
+
+        if( keyboard_selected_option == -1 ) {
+            ImGui::SetKeyboardFocusHere( -1 );
+            keyboard_selected_option = parent->buttons.size() - 1;
+        }
     }
 }
 
@@ -273,14 +302,13 @@ query_popup::result query_popup::query_once()
     //    impl->on_resized();
     //}
 
-    ui_manager::redraw();
+    //ui_manager::redraw();
 
     input_context ctxt( category, pref_kbd_mode );
     if( cancel || !options.empty() ) {
         ctxt.register_action( "HELP_KEYBINDINGS" );
     }
     if( !options.empty() ) {
-        //ctxt.register_leftright();
         ctxt.register_action( "CONFIRM" );
         for( const query_popup::query_option &opt : options ) {
             ctxt.register_action( opt.action );
@@ -306,21 +334,12 @@ query_popup::result query_popup::query_once()
         res.evt = ctxt.get_raw_input();
 
         // If we're tracking mouse movement
-        if( !options.empty() && ( res.action == "MOUSE_MOVE" || res.action == "SELECT" ) ) {
-            std::optional<point> coord = ctxt.get_coordinates_text( win );
-            for( size_t i = 0; i < buttons.size(); i++ ) {
-                if( coord.has_value() && buttons[i].contains( coord.value() ) ) {
-                    if( i != cur ) {
-                        // Mouse-over new button, switch selection
-                        cur = i;
-                        ui_manager::redraw();
-                    }
-                    if( res.action == "SELECT" ) {
-                        // Left-click to confirm selection
-                        res.action = "CONFIRM";
-                    }
-                }
-            }
+        if( !options.empty() && res.action == "SELECT" && impl->get_mouse_selected_option() != -1 ) {
+            // Left-click to confirm selection
+            res.action = "CONFIRM";
+            cur = size_t( impl->get_mouse_selected_option() );
+        } else if( res.action == "CONFIRM" && impl->get_keyboard_selected_option() != -1 ) {
+            cur = size_t( impl->get_keyboard_selected_option() );
         }
     } while(
         // Always ignore mouse movement
@@ -332,8 +351,6 @@ query_popup::result query_popup::query_once()
 
     if( cancel && res.action == "QUIT" ) {
         res.wait_input = false;
-        //} else if( res.action == "LEFT" || res.action == "RIGHT" ) {
-        //    cur = inc_clamp_wrap( cur, res.action == "RIGHT", options.size() );
     } else if( res.action == "CONFIRM" ) {
         if( cur < options.size() ) {
             res.wait_input = false;
