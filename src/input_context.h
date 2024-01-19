@@ -18,6 +18,7 @@
 #include "translation.h"
 
 class hotkey_queue;
+class keybindings_ui;
 namespace catacurses
 {
 class window;
@@ -35,6 +36,7 @@ class window;
  */
 class input_context
 {
+        friend class keybindings_ui;
     public:
 #if defined(__ANDROID__)
         // Whatever's on top is our current input context.
