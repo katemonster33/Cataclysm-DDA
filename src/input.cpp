@@ -1448,6 +1448,7 @@ cataimgui::bounds keybindings_ui::get_bounds()
 
 void keybindings_ui::draw_controls()
 {
+    scroll_offset = -1;
     size_t legend_idx = 0;
     for( ; legend_idx < 3; legend_idx++ ) {
         draw_colored_text( legend[legend_idx].c_str(), c_white );
@@ -1461,57 +1462,69 @@ void keybindings_ui::draw_controls()
     for( ; legend_idx < legend.size(); legend_idx++ ) {
         draw_colored_text( legend[legend_idx].c_str(), c_white );
     }
-    ImGui::InputText( "##NOLABEL", filter_text, _countof( filter_text ) );
-    ImGui::Separator();
-    if( ImGui::BeginTable( "KB_KEYS", 2, ImGuiTableFlags_ScrollY ) ) {
-        ImGui::TableSetupColumn( "Action Name",
-                                 ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort );
-        float keys_col_width = str_width_to_pixels( width ) - str_width_to_pixels( TERMX >= 100 ? 62 : 52 );
-        ImGui::TableSetupColumn( "Assigned Key(s)",
-                                 ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, keys_col_width );
-        //ImGui::TableHeadersRow();
-        for( size_t i = 0; i < filtered_registered_actions.size(); i++ ) {
-            const std::string &action_id = filtered_registered_actions[i];
+    if( ImGui::BeginChild( "SCROLL_CHILD" ) ) {
+        ImGui::InputText( "##NOLABEL", filter_text, _countof( filter_text ),
+                          status == s_show ? NULL : ImGuiInputTextFlags_ReadOnly );
+        ImGui::Separator();
+        if( ImGui::BeginTable( "KB_KEYS", 2 ) ) {
+            ImGui::TableSetupColumn( "Action Name",
+                                     ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort );
+            float keys_col_width = str_width_to_pixels( width ) - str_width_to_pixels( TERMX >= 100 ? 62 : 52 );
+            ImGui::TableSetupColumn( "Assigned Key(s)",
+                                     ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, keys_col_width );
+            //ImGui::TableHeadersRow();
+            for( size_t i = 0; i < filtered_registered_actions.size(); i++ ) {
+                const std::string &action_id = filtered_registered_actions[i];
 
-            bool overwrite_default;
-            const action_attributes &attributes = inp_mngr.get_action_attributes( action_id, ctxt->category,
-                                                  &overwrite_default );
+                bool overwrite_default;
+                const action_attributes &attributes = inp_mngr.get_action_attributes( action_id, ctxt->category,
+                                                      &overwrite_default );
 
-            char invlet;
-            if( i < hotkeys.size() ) {
-                invlet = hotkeys[i];
-            } else {
-                invlet = ' ';
+                ImGui::TableNextColumn();
+                ImGui::Text( " " );
+                ImGui::SameLine( 0, 0 );
+                char invlet;
+                //if( i < hotkeys.size() ) {
+                //    invlet = hotkeys[i];
+                if( ImGui::IsItemVisible() ) {
+                    if( scroll_offset == -1 ) {
+                        scroll_offset = i;
+                    }
+                    if( i >= scroll_offset && ( i - scroll_offset ) < hotkeys.size() ) {
+                        invlet = hotkeys[i - scroll_offset];
+                    }
+                } else {
+                    invlet = ' ';
+                }
+                std::string key_text;
+                if( status == s_add_global && overwrite_default ) {
+                    // We're trying to add a global, but this action has a local
+                    // defined, so gray out the invlet.
+                    key_text = colorize( string_format( "%c ", invlet ), c_dark_gray );
+                } else if( status == s_add || status == s_add_global || status == s_remove ) {
+                    key_text = colorize( string_format( "%c ", invlet ), c_light_blue );
+                } else if( status == s_execute ) {
+                    key_text = colorize( string_format( "%c ", invlet ), c_white );
+                } else {
+                    key_text = "  ";
+                }
+                nc_color col;
+                if( attributes.input_events.empty() ) {
+                    col = i == size_t( highlight_row_index ) ? h_unbound_key : unbound_key;
+                } else if( overwrite_default ) {
+                    col = i == size_t( highlight_row_index ) ? h_local_key : local_key;
+                } else {
+                    col = i == size_t( highlight_row_index ) ? h_global_key : global_key;
+                }
+                key_text += string_format( "%s:", ctxt->get_action_name( action_id ) );
+                draw_colored_text( key_text.c_str(), col );
+                //ImGui::SameLine();
+                //ImGui::SetCursorPosX(str_width_to_pixels(TERMX >= 100 ? 62 : 52));
+                ImGui::TableNextColumn();
+                ImGui::Text( ctxt->get_desc( action_id ).c_str() );
             }
-            std::string key_text;
-            if( status == s_add_global && overwrite_default ) {
-                // We're trying to add a global, but this action has a local
-                // defined, so gray out the invlet.
-                key_text = colorize( string_format( "%c ", invlet ), c_dark_gray );
-            } else if( status == s_add || status == s_add_global || status == s_remove ) {
-                key_text = colorize( string_format( "%c ", invlet ), c_light_blue );
-            } else if( status == s_execute ) {
-                key_text = colorize( string_format( "%c ", invlet ), c_white );
-            } else {
-                key_text = "  ";
-            }
-            nc_color col;
-            if( attributes.input_events.empty() ) {
-                col = i == size_t( highlight_row_index ) ? h_unbound_key : unbound_key;
-            } else if( overwrite_default ) {
-                col = i == size_t( highlight_row_index ) ? h_local_key : local_key;
-            } else {
-                col = i == size_t( highlight_row_index ) ? h_global_key : global_key;
-            }
-            key_text += string_format( "%s:", ctxt->get_action_name( action_id ) );
-            ImGui::TableNextColumn();
-            draw_colored_text( key_text.c_str(), col );
-            //ImGui::SameLine();
-            //ImGui::SetCursorPosX(str_width_to_pixels(TERMX >= 100 ? 62 : 52));
-            ImGui::TableNextColumn();
-            ImGui::Text( ctxt->get_desc( action_id ).c_str() );
+            ImGui::EndTable();
         }
-        ImGui::EndTable();
     }
 
 
@@ -1539,10 +1552,11 @@ action_id input_context::display_menu( const bool permit_execute_action )
     ctxt.register_action( "REMOVE" );
     ctxt.register_action( "ADD_LOCAL" );
     ctxt.register_action( "ADD_GLOBAL" );
+    ctxt.register_action( "TEXT.CLEAR" );
     if( permit_execute_action ) {
         ctxt.register_action( "EXECUTE" );
     }
-    //ctxt.register_action( "QUIT" );
+    ctxt.register_action( "QUIT" );
     ctxt.register_action( "ANY_INPUT" );
 
     if( category != "HELP_KEYBINDINGS" ) {
@@ -1550,18 +1564,6 @@ action_id input_context::display_menu( const bool permit_execute_action )
         ctxt.register_action( "HELP_KEYBINDINGS" );
     }
 
-
-    //ui_adaptor ui;
-    // ignore hardcoded keys in string input popup
-    /*for( const std::pair<const fallback_action, int> &v : fallback_keys ) {
-        spopup.add_callback( v.second, []() {
-            return true;
-        } );
-    }*/
-    //const auto recalc_size = [&]( ui_adaptor & ui ) {
-    //};
-    //recalc_size( ui );
-    //ui.on_screen_resize( recalc_size );
 
     // has the user changed something?
     bool changed = false;
@@ -1626,6 +1628,8 @@ action_id input_context::display_menu( const bool permit_execute_action )
             if( !kb_menu.filtered_registered_actions.empty() ) {
                 kb_menu.status = kb_menu.s_execute;
             }
+        } else if( action == "TEXT.CLEAR" ) {
+            kb_menu.filter_text[0] = '\0';
         } else if( action == "QUIT" ) {
             if( kb_menu.status != kb_menu.s_show ) {
                 kb_menu.status = kb_menu.s_show;
