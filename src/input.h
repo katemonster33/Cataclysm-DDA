@@ -20,7 +20,7 @@
 enum action_id : int;
 class cata_path;
 class hotkey_queue;
-
+class keybindings_ui;
 namespace catacurses
 {
 class window;
@@ -142,9 +142,6 @@ enum : int {
     f24       = 0x40000073,
 };
 } // namespace keycode
-
-constexpr int LEGEND_HEIGHT = 8;
-constexpr int BORDER_SPACE = 2;
 
 bool is_mouse_enabled();
 bool is_keycode_mode_supported();
@@ -455,6 +452,7 @@ class input_manager
 
     private:
         friend class input_context;
+        friend class keybindings_ui;
 
         using t_input_event_list = std::vector<input_event>;
         using t_actions = std::map<std::string, action_attributes>;
@@ -544,6 +542,7 @@ extern input_manager inp_mngr;
  */
 class input_context
 {
+        friend class keybindings_ui;
     public:
 #if defined(__ANDROID__)
         // Whatever's on top is our current input context.
