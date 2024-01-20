@@ -80,7 +80,7 @@ void query_popup_impl::draw_controls()
 void query_popup_impl::on_resized()
 {
     constexpr size_t horz_padding = 2;
-    constexpr size_t vert_padding = 1;
+    // constexpr size_t vert_padding = 1;
     size_t max_line_width = str_width_to_pixels( FULL_SCREEN_WIDTH - 1 * 2 );
 
     // Fold message text

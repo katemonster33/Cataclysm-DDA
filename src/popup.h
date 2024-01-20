@@ -13,6 +13,7 @@
 #include "input_enums.h"
 
 class ui_adaptor;
+class query_popup_impl;
 
 /**
  * UI class for displaying messages or querying player input with popups.
