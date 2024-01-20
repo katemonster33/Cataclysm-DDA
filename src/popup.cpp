@@ -39,10 +39,10 @@ class query_popup_impl : public cataimgui::window
         void draw_controls() override;
         cataimgui::bounds get_bounds() override {
             if( parent->buttons.empty() ) {
-                return cataimgui::bounds( -1.f, -1.f, -1.f, -1.f );
+                return { -1.f, -1.f, -1.f, -1.f };
             } else {
-                return cataimgui::bounds( -1.f, -1.f,
-                                          float( msg_width ) + ( ImGui::GetStyle().WindowBorderSize * 2 ), -1.f );
+                return { -1.f, -1.f,
+                         float( msg_width ) + ( ImGui::GetStyle().WindowBorderSize * 2 ), -1.f };
             }
         }
 };

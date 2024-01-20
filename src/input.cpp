@@ -1454,7 +1454,7 @@ void keybindings_ui::draw_controls()
     if( last_status != status && status == s_show ) {
         ImGui::SetKeyboardFocusHere( 0 );
     }
-    ImGui::InputText( "##NOLABEL", filter_text, _countof( filter_text ),
+    ImGui::InputText( "##NOLABEL", filter_text, std::extent< decltype( filter_text )>::value,
                       status == s_show ? NULL : ImGuiInputTextFlags_ReadOnly );
     ImGui::Separator();
     if( ImGui::BeginTable( "KB_KEYS", 2, ImGuiTableFlags_ScrollY ) ) {
@@ -1583,7 +1583,7 @@ action_id input_context::display_menu( const bool permit_execute_action )
 
     while( true ) {
         ui_manager::redraw();
-        if( !kb_menu.has_button_action() ) {
+        if( kb_menu.has_button_action() ) {
             action = kb_menu.get_button_action();
             raw_input_char = NULL;
         } else {

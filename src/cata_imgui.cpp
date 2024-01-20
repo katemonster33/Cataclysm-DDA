@@ -198,28 +198,6 @@ void cataimgui::client::process_input( void *input )
 
 #endif
 
-
-cataimgui::bounds::bounds()
-{
-    x = y = w = h = 0.f;
-}
-
-cataimgui::bounds::bounds( const cataimgui::bounds &other )
-{
-    x = other.x;
-    y = other.y;
-    w = other.w;
-    h = other.h;
-}
-
-cataimgui::bounds::bounds( float x, float y, float w, float h )
-{
-    this->x = x;
-    this->y = y;
-    this->w = w;
-    this->h = h;
-}
-
 void cataimgui::window::draw_colored_text( std::string const &text, const nc_color &color,
         text_align alignment, float max_width, bool *is_selected, bool *is_focused, bool *is_hovered )
 {
@@ -666,7 +644,7 @@ std::string cataimgui::window::get_button_action()
 
 cataimgui::bounds cataimgui::window::get_bounds()
 {
-    return cataimgui::bounds( -1.f, -1.f, -1.f, -1.f );
+    return { -1.f, -1.f, -1.f, -1.f };
 }
 
 void cataimgui::window::add_child( cataimgui::window *child )

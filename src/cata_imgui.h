@@ -20,9 +20,6 @@ struct bounds {
     float y;
     float w;
     float h;
-    bounds();
-    bounds( const bounds &other );
-    bounds( float x, float y, float w, float h );
 };
 
 enum class mbox_btn {
