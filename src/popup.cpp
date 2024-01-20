@@ -88,7 +88,7 @@ void query_popup_impl::draw_controls()
 void query_popup_impl::on_resized()
 {
     constexpr size_t horz_padding = 2;
-    constexpr size_t vert_padding = 1;
+    // constexpr size_t vert_padding = 1;
     size_t max_line_width = str_width_to_pixels( FULL_SCREEN_WIDTH - 1 * 2 );
 
     // Fold message text
@@ -129,7 +129,7 @@ void query_popup_impl::on_resized()
                 }
                 // Right align.
                 // TODO: multi-line buttons
-                size_t button_x = std::max( 0ull, msg_width - button_width -
+                size_t button_x = std::max( 0UL, msg_width - button_width -
                                             horz_padding * ( line.size() - 1 ) );
                 for( const auto &opt : line ) {
                     parent->buttons.emplace_back( opt, point( button_x, 0 ) );

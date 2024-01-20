@@ -1440,7 +1440,7 @@ void keybindings_ui::draw_controls()
     scroll_offset = -1;
     size_t legend_idx = 0;
     for( ; legend_idx < 3; legend_idx++ ) {
-        draw_colored_text( legend[legend_idx].c_str(), c_white );
+        draw_colored_text( legend[legend_idx], c_white );
         ImGui::SameLine();
         std::string button_text_no_color = remove_color_tags( buttons[legend_idx].second );
         ImGui::SetCursorPosX( str_width_to_pixels( width ) - ( get_text_width(
@@ -1449,13 +1449,13 @@ void keybindings_ui::draw_controls()
         action_button( buttons[legend_idx].first, button_text_no_color );
     }
     for( ; legend_idx < legend.size(); legend_idx++ ) {
-        draw_colored_text( legend[legend_idx].c_str(), c_white );
+        draw_colored_text( legend[legend_idx], c_white );
     }
     if( last_status != status && status == s_show ) {
         ImGui::SetKeyboardFocusHere( 0 );
     }
     ImGui::InputText( "##NOLABEL", filter_text, std::extent< decltype( filter_text )>::value,
-                      status == s_show ? NULL : ImGuiInputTextFlags_ReadOnly );
+                      status == s_show ? 0 : ImGuiInputTextFlags_ReadOnly );
     ImGui::Separator();
     if( ImGui::BeginTable( "KB_KEYS", 2, ImGuiTableFlags_ScrollY ) ) {
         if( last_status != status && status != s_show ) {
@@ -1481,7 +1481,7 @@ void keybindings_ui::draw_controls()
             //if( i < hotkeys.size() ) {
             //    invlet = hotkeys[i];
             if( ImGui::IsItemVisible() ) {
-                if( scroll_offset == -1 ) {
+                if( scroll_offset == std::numeric_limits<size_t>::max() ) {
                     scroll_offset = i;
                 }
                 if( i >= scroll_offset && ( i - scroll_offset ) < hotkeys.size() ) {
@@ -1511,11 +1511,11 @@ void keybindings_ui::draw_controls()
                 col = i == size_t( highlight_row_index ) ? h_global_key : global_key;
             }
             key_text += string_format( "%s:", ctxt->get_action_name( action_id ) );
-            draw_colored_text( key_text.c_str(), col );
+            draw_colored_text( key_text, col );
             //ImGui::SameLine();
             //ImGui::SetCursorPosX(str_width_to_pixels(TERMX >= 100 ? 62 : 52));
             ImGui::TableNextColumn();
-            ImGui::Text( ctxt->get_desc( action_id ).c_str() );
+            ImGui::Text( "%s", ctxt->get_desc( action_id ).c_str() );
         }
         ImGui::EndTable();
     }
@@ -1585,7 +1585,7 @@ action_id input_context::display_menu( const bool permit_execute_action )
         ui_manager::redraw();
         if( kb_menu.has_button_action() ) {
             action = kb_menu.get_button_action();
-            raw_input_char = NULL;
+            raw_input_char = 0;
         } else {
             action = ctxt.handle_input();
             raw_input_char = ctxt.get_raw_input().get_first_input();
