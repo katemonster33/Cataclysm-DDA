@@ -56,11 +56,11 @@ class keybindings_ui : public cataimgui::window
         input_context *ctxt;
     public:
         // current status: adding/removing/executing/showing keybindings
-        enum { s_remove, s_add, s_add_global, s_execute, s_show } status = s_show;
+        enum { s_remove, s_add, s_add_global, s_execute, s_show } status = s_show, last_status = s_execute;
 
         // keybindings help
         std::vector<std::string> legend;
-        std::vector<std::string> buttons;
+        std::vector<std::pair<std::string, std::string>> buttons;
         int width = 0;
         std::vector<std::string> filtered_registered_actions;
         std::string hotkeys;
@@ -1223,17 +1223,6 @@ std::string input_context::describe_key_and_name( const std::string &action_desc
     return get_desc( action_descriptor, get_action_name( action_descriptor ), evt_filter );
 }
 
-// In ImGui, there are lots of cases where we need to execute code related to an action while drawing.
-//  We can't always do this cleanly during drawing, so we set action_override here so that the next
-//  time input_context::handle_input gets no input, it instead returns action_override.
-static std::string action_override;
-static std::string action_override_old;
-
-void input_context::set_action_override( const std::string &action )
-{
-    action_override = action;
-}
-
 const std::string &input_context::handle_input()
 {
     return handle_input( timeout );
@@ -1296,13 +1285,7 @@ const std::string &input_context::handle_input( const int timeout )
         // enters something proper.
     }
     inp_mngr.set_timeout( old_timeout );
-    if( next_action.type == input_event_t::error && !action_override.empty() ) {
-        action_override_old = action_override;
-        action_override = "";
-        return action_override_old;
-    } else {
-        return *result;
-    }
+    return *result;
 }
 
 void input_context::register_directions()
@@ -1419,7 +1402,7 @@ static const std::map<fallback_action, int> fallback_keys = {
 
 
 keybindings_ui::keybindings_ui( const bool permit_execute_action,
-                                input_context *parent ) : cataimgui::window( "KEYBINDINGS" )
+                                input_context *parent ) : cataimgui::window( "KEYBINDINGS", ImGuiWindowFlags_NoNav )
 {
     filter_text[0] = '\0';
     this->ctxt = parent;
@@ -1432,13 +1415,19 @@ keybindings_ui::keybindings_ui( const bool permit_execute_action,
                               _( "Press %c to execute action\n" ),
                               fallback_keys.at( fallback_action::execute ) ) );
     }
-
-    buttons.push_back( string_format( _( "[<color_yellow>%c</color>] Remove keybinding" ),
-                                      fallback_keys.at( fallback_action::remove ) ) );
-    buttons.push_back( string_format( _( "[<color_yellow>%c</color>] Add local keybinding" ),
-                                      fallback_keys.at( fallback_action::add_local ) ) );
-    buttons.push_back( string_format( _( "[<color_yellow>%c</color>] Add global keybinding" ),
-                                      fallback_keys.at( fallback_action::add_global ) ) );
+    buttons.assign( {
+        {
+            "REMOVE", string_format( _( "[<color_yellow>%c</color>] Remove keybinding" ),
+                                     fallback_keys.at( fallback_action::remove ) )
+        },
+        {
+            "ADD_LOCAL", string_format( _( "[<color_yellow>%c</color>] Add local keybinding" ),
+                                        fallback_keys.at( fallback_action::add_local ) )
+        },
+        {
+            "ADD_GLOBAL", string_format( _( "[<color_yellow>%c</color>] Add global keybinding" ),
+                                         fallback_keys.at( fallback_action::add_global ) )
+        } } );
 }
 
 cataimgui::bounds keybindings_ui::get_bounds()
@@ -1453,80 +1442,84 @@ void keybindings_ui::draw_controls()
     for( ; legend_idx < 3; legend_idx++ ) {
         draw_colored_text( legend[legend_idx].c_str(), c_white );
         ImGui::SameLine();
-        std::string button_text_no_color = remove_color_tags( buttons[legend_idx] );
+        std::string button_text_no_color = remove_color_tags( buttons[legend_idx].second );
         ImGui::SetCursorPosX( str_width_to_pixels( width ) - ( get_text_width(
                                   button_text_no_color.c_str() ) +
                               ( ImGui::GetStyle().FramePadding.x * 2 ) + ImGui::GetStyle().ItemSpacing.x ) );
-        ImGui::Button( button_text_no_color.c_str() );
+        action_button( buttons[legend_idx].first, button_text_no_color );
     }
     for( ; legend_idx < legend.size(); legend_idx++ ) {
         draw_colored_text( legend[legend_idx].c_str(), c_white );
     }
-    if( ImGui::BeginChild( "SCROLL_CHILD" ) ) {
-        ImGui::InputText( "##NOLABEL", filter_text, _countof( filter_text ),
-                          status == s_show ? NULL : ImGuiInputTextFlags_ReadOnly );
-        ImGui::Separator();
-        if( ImGui::BeginTable( "KB_KEYS", 2 ) ) {
-            ImGui::TableSetupColumn( "Action Name",
-                                     ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort );
-            float keys_col_width = str_width_to_pixels( width ) - str_width_to_pixels( TERMX >= 100 ? 62 : 52 );
-            ImGui::TableSetupColumn( "Assigned Key(s)",
-                                     ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, keys_col_width );
-            //ImGui::TableHeadersRow();
-            for( size_t i = 0; i < filtered_registered_actions.size(); i++ ) {
-                const std::string &action_id = filtered_registered_actions[i];
-
-                bool overwrite_default;
-                const action_attributes &attributes = inp_mngr.get_action_attributes( action_id, ctxt->category,
-                                                      &overwrite_default );
-
-                ImGui::TableNextColumn();
-                ImGui::Text( " " );
-                ImGui::SameLine( 0, 0 );
-                char invlet;
-                //if( i < hotkeys.size() ) {
-                //    invlet = hotkeys[i];
-                if( ImGui::IsItemVisible() ) {
-                    if( scroll_offset == -1 ) {
-                        scroll_offset = i;
-                    }
-                    if( i >= scroll_offset && ( i - scroll_offset ) < hotkeys.size() ) {
-                        invlet = hotkeys[i - scroll_offset];
-                    }
-                } else {
-                    invlet = ' ';
-                }
-                std::string key_text;
-                if( status == s_add_global && overwrite_default ) {
-                    // We're trying to add a global, but this action has a local
-                    // defined, so gray out the invlet.
-                    key_text = colorize( string_format( "%c ", invlet ), c_dark_gray );
-                } else if( status == s_add || status == s_add_global || status == s_remove ) {
-                    key_text = colorize( string_format( "%c ", invlet ), c_light_blue );
-                } else if( status == s_execute ) {
-                    key_text = colorize( string_format( "%c ", invlet ), c_white );
-                } else {
-                    key_text = "  ";
-                }
-                nc_color col;
-                if( attributes.input_events.empty() ) {
-                    col = i == size_t( highlight_row_index ) ? h_unbound_key : unbound_key;
-                } else if( overwrite_default ) {
-                    col = i == size_t( highlight_row_index ) ? h_local_key : local_key;
-                } else {
-                    col = i == size_t( highlight_row_index ) ? h_global_key : global_key;
-                }
-                key_text += string_format( "%s:", ctxt->get_action_name( action_id ) );
-                draw_colored_text( key_text.c_str(), col );
-                //ImGui::SameLine();
-                //ImGui::SetCursorPosX(str_width_to_pixels(TERMX >= 100 ? 62 : 52));
-                ImGui::TableNextColumn();
-                ImGui::Text( ctxt->get_desc( action_id ).c_str() );
-            }
-            ImGui::EndTable();
-        }
+    if( last_status != status && status == s_show ) {
+        ImGui::SetKeyboardFocusHere( 0 );
     }
+    ImGui::InputText( "##NOLABEL", filter_text, _countof( filter_text ),
+                      status == s_show ? NULL : ImGuiInputTextFlags_ReadOnly );
+    ImGui::Separator();
+    if( ImGui::BeginTable( "KB_KEYS", 2, ImGuiTableFlags_ScrollY ) ) {
+        if( last_status != status && status != s_show ) {
+            ImGui::SetKeyboardFocusHere( 0 );
+        }
+        ImGui::TableSetupColumn( "Action Name",
+                                 ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort );
+        float keys_col_width = str_width_to_pixels( width ) - str_width_to_pixels( TERMX >= 100 ? 62 : 52 );
+        ImGui::TableSetupColumn( "Assigned Key(s)",
+                                 ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, keys_col_width );
+        //ImGui::TableHeadersRow();
+        for( size_t i = 0; i < filtered_registered_actions.size(); i++ ) {
+            const std::string &action_id = filtered_registered_actions[i];
 
+            bool overwrite_default;
+            const action_attributes &attributes = inp_mngr.get_action_attributes( action_id, ctxt->category,
+                                                  &overwrite_default );
+
+            ImGui::TableNextColumn();
+            ImGui::Text( " " );
+            ImGui::SameLine( 0, 0 );
+            char invlet;
+            //if( i < hotkeys.size() ) {
+            //    invlet = hotkeys[i];
+            if( ImGui::IsItemVisible() ) {
+                if( scroll_offset == -1 ) {
+                    scroll_offset = i;
+                }
+                if( i >= scroll_offset && ( i - scroll_offset ) < hotkeys.size() ) {
+                    invlet = hotkeys[i - scroll_offset];
+                }
+            } else {
+                invlet = ' ';
+            }
+            std::string key_text;
+            if( status == s_add_global && overwrite_default ) {
+                // We're trying to add a global, but this action has a local
+                // defined, so gray out the invlet.
+                key_text = colorize( string_format( "%c ", invlet ), c_dark_gray );
+            } else if( status == s_add || status == s_add_global || status == s_remove ) {
+                key_text = colorize( string_format( "%c ", invlet ), c_light_blue );
+            } else if( status == s_execute ) {
+                key_text = colorize( string_format( "%c ", invlet ), c_white );
+            } else {
+                key_text = "  ";
+            }
+            nc_color col;
+            if( attributes.input_events.empty() ) {
+                col = i == size_t( highlight_row_index ) ? h_unbound_key : unbound_key;
+            } else if( overwrite_default ) {
+                col = i == size_t( highlight_row_index ) ? h_local_key : local_key;
+            } else {
+                col = i == size_t( highlight_row_index ) ? h_global_key : global_key;
+            }
+            key_text += string_format( "%s:", ctxt->get_action_name( action_id ) );
+            draw_colored_text( key_text.c_str(), col );
+            //ImGui::SameLine();
+            //ImGui::SetCursorPosX(str_width_to_pixels(TERMX >= 100 ? 62 : 52));
+            ImGui::TableNextColumn();
+            ImGui::Text( ctxt->get_desc( action_id ).c_str() );
+        }
+        ImGui::EndTable();
+    }
+    last_status = status;
 
     // spopup.query_string() will call wnoutrefresh( w_help )
     //spopup.text(filter_phrase);
@@ -1590,9 +1583,13 @@ action_id input_context::display_menu( const bool permit_execute_action )
 
     while( true ) {
         ui_manager::redraw();
-
-        action = ctxt.handle_input();
-        raw_input_char = ctxt.get_raw_input().get_first_input();
+        if( !kb_menu.has_button_action() ) {
+            action = kb_menu.get_button_action();
+            raw_input_char = NULL;
+        } else {
+            action = ctxt.handle_input();
+            raw_input_char = ctxt.get_raw_input().get_first_input();
+        }
         for( const std::pair<const fallback_action, int> &v : fallback_keys ) {
             if( v.second == raw_input_char ) {
                 action.clear();

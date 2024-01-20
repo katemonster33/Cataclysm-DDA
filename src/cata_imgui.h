@@ -88,6 +88,8 @@ class window
                                 text_align alignment = text_align::Left, float max_width = 0.0F, bool *is_selected = nullptr,
                                 bool *is_focused = nullptr, bool *is_hovered = nullptr );
         bool action_button( const std::string &action, const std::string &text );
+        bool has_button_action();
+        std::string get_button_action();
         void draw_header( std::string const &text );
         bool get_is_open() const;
         void set_title( const std::string &title );
@@ -108,6 +110,7 @@ class window
         bool is_open;
         std::string id;
         int window_flags;
+        std::string button_action;
         virtual bounds get_bounds();
         virtual void draw_controls() = 0;
         int draw_item_info_data( item_info_data &data );

@@ -537,6 +537,7 @@ void cataimgui::window::mark_bounds_changed()
 
 void cataimgui::window::draw()
 {
+    button_action.clear();
     if( !is_open ) {
         return;
     }
@@ -647,10 +648,20 @@ cataimgui::dialog_result cataimgui::window::show_popup( popup *next_popup )
 bool cataimgui::window::action_button( const std::string &action, const std::string &text )
 {
     if( ImGui::Button( text.c_str() ) ) {
-        input_context::set_action_override( action );
+        button_action = action;
         return true;
     }
     return false;
+}
+
+bool cataimgui::window::has_button_action()
+{
+    return !button_action.empty();
+}
+
+std::string cataimgui::window::get_button_action()
+{
+    return std::string( button_action );
 }
 
 cataimgui::bounds cataimgui::window::get_bounds()
