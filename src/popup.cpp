@@ -129,8 +129,8 @@ void query_popup_impl::on_resized()
                 }
                 // Right align.
                 // TODO: multi-line buttons
-                size_t button_x = std::max( 0UL, msg_width - button_width -
-                                            horz_padding * ( line.size() - 1 ) );
+                size_t button_x = std::max( size_t( 0 ), size_t( msg_width - button_width -
+                                            horz_padding * ( line.size() - 1 ) ) );
                 for( const auto &opt : line ) {
                     parent->buttons.emplace_back( opt, point( button_x, 0 ) );
                     button_x += get_text_width( opt.c_str() ) + horz_padding;

@@ -1511,7 +1511,11 @@ void keybindings_ui::draw_controls()
                 col = i == size_t( highlight_row_index ) ? h_global_key : global_key;
             }
             key_text += string_format( "%s:", ctxt->get_action_name( action_id ) );
-            draw_colored_text( key_text, col );
+            bool is_selected = false;
+            draw_colored_text( key_text, col, cataimgui::text_align::Left, 0.0f, &is_selected );
+            if( ( is_selected || ImGui::IsItemHovered() ) && invlet != ' ' ) {
+                highlight_row_index = i;
+            }
             //ImGui::SameLine();
             //ImGui::SetCursorPosX(str_width_to_pixels(TERMX >= 100 ? 62 : 52));
             ImGui::TableNextColumn();
@@ -1546,6 +1550,10 @@ action_id input_context::display_menu( const bool permit_execute_action )
     ctxt.register_action( "ADD_LOCAL" );
     ctxt.register_action( "ADD_GLOBAL" );
     ctxt.register_action( "TEXT.CLEAR" );
+    ctxt.register_action( "PAGE_UP" );
+    ctxt.register_action( "PAGE_DOWN" );
+    ctxt.register_action( "END" );
+    ctxt.register_action( "HOME" );
     if( permit_execute_action ) {
         ctxt.register_action( "EXECUTE" );
     }
@@ -1570,7 +1578,6 @@ action_id input_context::display_menu( const bool permit_execute_action )
         return a == ANY_INPUT || a == COORDINATE;
     } ), org_registered_actions.end() );
 
-    std::string filter_phrase;
     std::string action;
     keybindings_ui kb_menu( permit_execute_action, this );
     kb_menu.filtered_registered_actions = org_registered_actions;
@@ -1582,6 +1589,7 @@ action_id input_context::display_menu( const bool permit_execute_action )
     //ui.on_redraw( redraw );
 
     while( true ) {
+        kb_menu.highlight_row_index = -1;
         ui_manager::redraw();
         if( kb_menu.has_button_action() ) {
             action = kb_menu.get_button_action();
@@ -1597,10 +1605,8 @@ action_id input_context::display_menu( const bool permit_execute_action )
         }
 
         kb_menu.filtered_registered_actions = filter_strings_by_phrase( org_registered_actions,
-                                              filter_phrase );
-        if( action == "MOUSE_MOVE" || action == "SELECT" ) {
-            kb_menu.highlight_row_index = -1;
-        }
+                                              std::string( kb_menu.filter_text ) );
+
         // In addition to the modifiable hotkeys, we also check for hardcoded
         // keys, e.g. '+', '-', '=', '.' in order to prevent the user from
         // entering an unrecoverable state.
@@ -1625,8 +1631,14 @@ action_id input_context::display_menu( const bool permit_execute_action )
             if( !kb_menu.filtered_registered_actions.empty() ) {
                 kb_menu.status = kb_menu.s_execute;
             }
+        } else if( action == "PAGE_UP" || action == "PAGE_DOWN" || action == "HOME" || action == "END" ) {
+            continue; // do nothing - on tiles version for some reason this counts as pressing various alphabet keys
         } else if( action == "TEXT.CLEAR" ) {
             kb_menu.filter_text[0] = '\0';
+            kb_menu.filtered_registered_actions = filter_strings_by_phrase( org_registered_actions,
+                                                  "" );
+        } else if( !kb_menu.get_is_open() ) {
+            break;
         } else if( action == "QUIT" ) {
             if( kb_menu.status != kb_menu.s_show ) {
                 kb_menu.status = kb_menu.s_show;
