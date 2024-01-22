@@ -427,6 +427,10 @@ void ui_adaptor::redraw_invalidated( )
                 ui_adaptor &ui = *it;
                 if( ui.invalidated || ui.is_imgui ) {
                     if( ui.redraw_cb ) {
+                        ui.redraw_cb( ui );
+                    }
+                } else if( ui.invalidated ) {
+                    if( ui.redraw_cb ) {
                         ui.default_cursor();
                         ui.redraw_cb( ui );
                         if( ui.cursor_type == cursor::last ) {
