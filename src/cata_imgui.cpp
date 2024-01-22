@@ -420,6 +420,7 @@ class cataimgui::window_impl
             window_adaptor->is_imgui = true;
             window_adaptor->on_redraw( [this]( ui_adaptor & ) {
                 win_base->draw();
+                window_adaptor->position( ImGui::GetWindowPos(), ImGui::GetWindowSize() );
             } );
             window_adaptor->on_screen_resize( [this]( ui_adaptor & ) {
                 is_resized = true;
