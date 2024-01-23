@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "cata_assert.h"
+#include "imgui/imgui.h"
 
 class JsonArray;
 class JsonOut;
@@ -94,6 +95,9 @@ struct point {
 
     friend std::ostream &operator<<( std::ostream &, const point & );
     friend std::istream &operator>>( std::istream &, point & );
+
+    constexpr point(const ImVec2& v) : x(v.x), y(v.y) {}  \
+    operator ImVec2() const { return ImVec2(x, y); }
 };
 
 inline int divide_round_to_minus_infinity( int n, int d )

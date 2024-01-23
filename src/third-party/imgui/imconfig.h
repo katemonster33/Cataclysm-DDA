@@ -13,7 +13,6 @@
 //-----------------------------------------------------------------------------
 
 #pragma once
-#include "point.h"
 
 //---- Define assertion handler. Defaults to calling assert().
 // If your macro uses multiple statements, make sure is enclosed in a 'do { .. } while (0)' block so it can be used as a single statement.
@@ -91,9 +90,6 @@
         constexpr ImVec4(const MyVec4& f) : x(f.x), y(f.y), z(f.z), w(f.w) {}   \
         operator MyVec4() const { return MyVec4(x,y,z,w); }
 */
-#define IM_VEC2_CLASS_EXTRA \
-        constexpr ImVec2(const point& p) : x(p.x), y(p.y) {} \
-        operator point() const { return point(x, y); }
 
 //---- ...Or use Dear ImGui's own very basic math operators.
 //#define IMGUI_DEFINE_MATH_OPERATORS
