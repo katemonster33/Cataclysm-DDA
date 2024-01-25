@@ -424,7 +424,11 @@ void ui_adaptor::redraw_invalidated( bool draw_imgui )
             std::optional<point> cursor_pos;
             for( auto it = first_enabled; !restart_redrawing && it != ui_stack_orig->end(); ++it ) {
                 ui_adaptor &ui = *it;
-                if( ui.invalidated ) {
+                if( ui.is_imgui && draw_imgui && imgui_is_on_top ) {
+                    if( ui.redraw_cb ) {
+                        ui.redraw_cb( ui );
+                    }
+                } else if( ui.invalidated ) {
                     if( ui.redraw_cb ) {
                         ui.default_cursor();
                         ui.redraw_cb( ui );
@@ -438,11 +442,6 @@ void ui_adaptor::redraw_invalidated( bool draw_imgui )
                     }
                     if( !restart_redrawing ) {
                         ui.invalidated = false;
-                    }
-                }
-                if( ui.is_imgui && draw_imgui && imgui_is_on_top ) {
-                    if( ui.redraw_cb ) {
-                        ui.redraw_cb( ui );
                     }
                 }
             }
