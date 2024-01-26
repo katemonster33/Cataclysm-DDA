@@ -323,7 +323,7 @@ class cataimgui::window_impl
         explicit window_impl( cataimgui::window *win ) {
             win_base = win;
             is_resized = true;
-            window_adaptor.reset( new ui_adaptor() );
+            window_adaptor = std::make_unique<ui_adaptor>();
             window_adaptor->is_imgui = true;
             window_adaptor->on_redraw( [this]( ui_adaptor & ) {
                 win_base->draw();
