@@ -232,7 +232,7 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
             ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ( float( fullWidth ) / 2 ) - ( textWidth / 2 ) );
         }
     }
-    if( is_selected ) {
+    if( is_selected != nullptr ) {
         ImGui::Selectable( "", is_selected );
         ImGui::SameLine( 0, 0 );
     }
