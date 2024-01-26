@@ -280,7 +280,7 @@ CachedTTFFont::CachedTTFFont(
     }
     TTF_SetFontStyle( font.get(), TTF_STYLE_NORMAL );
 
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO &io = ImGui::GetIO();
     static const std::array<ImWchar, 17> ranges = {
         0x0020, 0x052F,
         0x1D00, 0x1DFF,
