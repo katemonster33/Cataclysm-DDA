@@ -308,102 +308,9 @@ void cataimgui::window::draw_colored_text( std::string const &text, nc_color &co
     ImGui::PopID();
 }
 
-int cataimgui::window::draw_item_info_data( item_info_data &data )
-{
-    std::string buffer;
-    if( !data.get_item_name().empty() ) {
-        buffer += data.get_item_name() + "\n";
-    }
-    // If type name is set, and not already contained in item name, output it too
-    if( !data.get_type_name().empty() &&
-        data.get_item_name().find( data.get_type_name() ) == std::string::npos ) {
-        buffer += data.get_type_name() + "\n";
-    }
-    for( unsigned int i = 0; i < data.padding; i++ ) {
-        buffer += "\n";
-    }
-
-    buffer += format_item_info( data.get_item_display(), data.get_item_compare() );
-
-    if( *data.ptr_selected < 0 ) {
-        *data.ptr_selected = 0;
-    }
-
-    const auto redraw = [this, data, buffer]() {
-        if( !data.without_getch ) {
-            if( !ImGui::Begin( data.get_item_name().c_str() ) ) {
-                ImGui::End();
-                return;
-            }
-        }
-        std::stringstream sstr( buffer );
-        std::string line;
-        while( std::getline( sstr, line ) ) {
-            if( line == "--" ) {
-                ImGui::Separator();
-            } else {
-                draw_colored_text( line, c_light_gray );
-            }
-        }
-        if( !data.without_getch ) {
-            ImGui::End();
-        }
-    };
-
-    if( data.without_getch ) {
-        redraw();
-        return 0;
-    }
-
-    input_context ctxt( "default", keyboard_mode::keychar );
-    if( data.handle_scrolling ) {
-        ctxt.register_action( "PAGE_UP" );
-        ctxt.register_action( "PAGE_DOWN" );
-    }
-    ctxt.register_action( "CONFIRM" );
-    ctxt.register_action( "QUIT" );
-    ctxt.register_action( "HELP_KEYBINDINGS" );
-    if( data.any_input ) {
-        ctxt.register_action( "ANY_INPUT" );
-    }
-
-    std::string action;
-    while( true ) {
-        redraw();
-        action = ctxt.handle_input();
-
-        if( action == "CONFIRM" || action == "QUIT" ||
-            ( data.any_input && action == "ANY_INPUT" &&
-              !ctxt.get_raw_input().sequence.empty() ) ) {
-            break;
-        }
-    }
-
-    return ctxt.get_raw_input().get_first_input();
-}
-
 bool cataimgui::window::get_is_open() const
 {
     return is_open;
-}
-
-void cataimgui::window::set_title( const std::string &title )
-{
-    id = title;
-}
-
-void cataimgui::window::draw_header( std::string const &text )
-{
-#if !(defined(TILES) || defined(WIN32))
-    ImGui::Text( "%s", text.c_str() );
-#else
-    ImGui::SeparatorText( text.c_str() );
-#endif
-}
-
-bool cataimgui::window::is_child_window_navigated()
-{
-    return GImGui->CurrentWindow->ChildId == GImGui->NavId;
 }
 
 class cataimgui::window_impl
@@ -432,19 +339,9 @@ class cataimgui::window_impl
 cataimgui::window::window( int window_flags )
 {
     p_impl = nullptr;
-    last_popup_result = dialog_result::None;
 
     this->window_flags = window_flags | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
                          ImGuiWindowFlags_NoSavedSettings;
-    open_popup_requested = false;
-    parent = nullptr;
-}
-
-cataimgui::window::window( cataimgui::window *parent, int window_flags ) : window( window_flags )
-{
-    this->parent = parent;
-    this->parent->add_child( this );
-    is_open = true;
 }
 
 cataimgui::window::window( const std::string &title, int window_flags ) : window( window_flags )
@@ -456,19 +353,12 @@ cataimgui::window::window( const std::string &title, int window_flags ) : window
 
 cataimgui::window::~window()
 {
-    for( cataimgui::window *child : children ) {
-        child->is_open = false;
-    }
     delete p_impl;
 }
 
 bool cataimgui::window::is_resized()
 {
-    if( parent ) {
-        return parent->is_resized();
-    } else {
-        return p_impl->is_resized;
-    }
+    return p_impl->is_resized;
 }
 
 size_t cataimgui::window::get_text_width( const char *text )
@@ -526,95 +416,22 @@ void cataimgui::window::draw()
         // we want to make sure is_resized is able to be handled for at least a full frame
         handled_resize = true;
     }
-    if( parent != nullptr ) {
-        if( cached_bounds.x >= 0 ) {
-            ImGui::SetCursorPosX( cached_bounds.x );
-        }
-        if( cached_bounds.y >= 0 ) {
-            ImGui::SetCursorPosY( cached_bounds.y );
-        }
-        if( ImGui::BeginChild( id.c_str(), { cached_bounds.w, cached_bounds.h }, false, window_flags ) ) {
-            draw_controls();
-        }
-        ImGui::EndChild();
-    } else {
-        if( cached_bounds.x == -1 && cached_bounds.y == -1 )             {
-            ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-            ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, { 0.5, 0.5 } );
-        } else if( cached_bounds.x >= 0 && cached_bounds.y >= 0 ) {
-            ImGui::SetNextWindowPos( { cached_bounds.x, cached_bounds.y } );
-        }
-        if( cached_bounds.h > 0 || cached_bounds.w > 0 ) {
-            ImGui::SetNextWindowSize( { cached_bounds.w, cached_bounds.h } );
-        }
-        if( ImGui::Begin( id.c_str(), &is_open, window_flags ) ) {
-            draw_controls();
-            if( active_popup ) {
-                if( open_popup_requested ) {
-                    active_popup->open();
-                    open_popup_requested = false;
-                }
-                if( active_popup->is_open ) {
-                    active_popup->draw();
-                } else {
-                    active_popup.reset();
-                }
-            }
-            for( window *child : children ) {
-                child->draw();
-            }
-        }
-        ImGui::End();
+    if( cached_bounds.x == -1 && cached_bounds.y == -1 )             {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, { 0.5, 0.5 } );
+    } else if( cached_bounds.x >= 0 && cached_bounds.y >= 0 ) {
+        ImGui::SetNextWindowPos( { cached_bounds.x, cached_bounds.y } );
     }
-    if( handled_resize && !parent ) {
+    if( cached_bounds.h > 0 || cached_bounds.w > 0 ) {
+        ImGui::SetNextWindowSize( { cached_bounds.w, cached_bounds.h } );
+    }
+    if( ImGui::Begin( id.c_str(), &is_open, window_flags ) ) {
+        draw_controls();
+    }
+    ImGui::End();
+    if( handled_resize ) {
         p_impl->is_resized = false;
     }
-}
-
-/// <summary>
-/// This method schedules a popup to be drawn on the next ImGui draw frame, the popup code is handled alongside the current window so the current window can continue processing inputs.
-///  Use this function if opening a popup from inside a draw_controls function
-/// </summary>
-/// <param name="next_popup">the popup to be shown</param>
-void cataimgui::window::show_popup_async( const std::shared_ptr<popup> &next_popup )
-{
-    open_popup_requested = true;
-    this->active_popup = next_popup;
-}
-
-void cataimgui::window::show_popup_async( popup *next_popup )
-{
-    open_popup_requested = true;
-    this->active_popup.reset( next_popup );
-}
-
-/// <summary>
-/// This method shows a popup and blocks until the popup closes. This will crash if called from inside draw_controls
-/// </summary>
-/// <param name="next_popup">the popup to show</param>
-/// <returns></returns>
-cataimgui::dialog_result cataimgui::window::show_popup( const std::shared_ptr<popup> &next_popup )
-{
-    this->active_popup = next_popup;
-    // on the next draw(), open the popup.
-    open_popup_requested = true;
-    input_context tmp_context( "IMGUI_WINDOW_POPUP" );
-    tmp_context.set_timeout( 0 );
-    tmp_context.register_action( "ANY_INPUT" );
-    do {
-        // force a redraw
-        tmp_context.handle_input();
-    } while( this->active_popup && this->active_popup->get_result() == cataimgui::dialog_result::None );
-    if( this->active_popup ) {
-        last_popup_result = this->active_popup->get_result();
-        this->active_popup.reset();
-    }
-    return last_popup_result;
-}
-
-cataimgui::dialog_result cataimgui::window::show_popup( popup *next_popup )
-{
-    return show_popup( std::shared_ptr<popup>( next_popup ) );
 }
 
 /// <summary>
@@ -646,253 +463,4 @@ std::string cataimgui::window::get_button_action()
 cataimgui::bounds cataimgui::window::get_bounds()
 {
     return { -1.f, -1.f, -1.f, -1.f };
-}
-
-void cataimgui::window::add_child( cataimgui::window *child )
-{
-    children.push_back( child );
-}
-
-bool cataimgui::is_drag_drop_active()
-{
-    return ImGui::GetCurrentContext()->DragDropActive;
-}
-
-static ImGuiID popup_id = 0;
-cataimgui::popup::popup( const std::string &id, bool is_modal )
-{
-    this->id = id;
-    result = cataimgui::dialog_result::None;
-    this->is_modal = is_modal;
-    if( !popup_id ) {
-        popup_id = ImHashStr( "POPUP" );
-    }
-}
-
-cataimgui::popup::popup( const std::string &id, bool is_modal,
-                         const std::function<bool()> &on_draw_callback ) : popup( id, is_modal )
-{
-    this->on_draw_callback = on_draw_callback;
-}
-
-cataimgui::popup::~popup()
-{
-    if( is_open ) {
-        close();
-    }
-}
-
-void cataimgui::popup::set_draw_callback( const std::function<bool()> &callback )
-{
-    on_draw_callback = callback;
-}
-
-void cataimgui::popup::draw()
-{
-    ImGui::PushOverrideID( popup_id );
-    auto bounds = get_bounds();
-    if( bounds.x >= 0 || bounds.y >= 0 ) {
-        ImGui::SetNextWindowPos( {bounds.x, bounds.y} );
-    } else {
-        ImGui::SetNextWindowPos( ImVec2( ImGui::GetIO().DisplaySize.x * 0.5f,
-                                         ImGui::GetIO().DisplaySize.y * 0.5f ), ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
-    }
-    if( bounds.h >= 0 || bounds.w >= 0 ) {
-        ImGui::SetNextWindowSize( {bounds.h, bounds.w} );
-    }
-    if( is_modal ) {
-        if( ImGui::BeginPopupModal( id.c_str(), &is_open, ImGuiWindowFlags_AlwaysAutoResize ) ) {
-            draw_controls();
-            ImGui::EndPopup();
-        }
-    } else {
-        if( ImGui::BeginPopup( id.c_str() ) ) {
-            draw_controls();
-            ImGui::EndPopup();
-        }
-    }
-    ImGui::PopID();
-    if( on_draw_callback ) {
-        on_draw_callback();
-    }
-}
-
-void cataimgui::popup::open()
-{
-    is_open = true;
-    ImGui::PushOverrideID( popup_id );
-    ImGui::OpenPopup( id.c_str() );
-    ImGui::PopID();
-}
-
-void cataimgui::popup::close()
-{
-    is_open = false;
-}
-
-cataimgui::dialog_result cataimgui::popup::get_result()
-{
-    return result;
-}
-
-bool cataimgui::popup::is_draw_callback_set()
-{
-    return bool( on_draw_callback );
-}
-
-cataimgui::message_box::message_box( const std::string &title,
-                                     const std::string &prompt, cataimgui::mbox_btn buttons ) : cataimgui::popup( title, true )
-{
-    this->buttons = buttons;
-    this->prompt = prompt;
-}
-
-cataimgui::dialog_result cataimgui::message_box::show( const std::string &title,
-        const std::string &text )
-{
-    input_context ctx( "INPUT_BOX" );
-    ctx.register_action( "ANY_INPUT" );
-    message_box input_box( title, text );
-    while( input_box.get_result() == dialog_result::None ) {
-        ctx.handle_input();
-    }
-    return input_box.get_result();
-}
-
-void cataimgui::message_box::draw_mbox_btn( const std::string &text,
-        dialog_result result_if_clicked )
-{
-    if( ImGui::Button( text.c_str() ) ) {
-        result = result_if_clicked;
-    }
-}
-
-cataimgui::bounds cataimgui::message_box::get_bounds()
-{
-#if defined(TILES) || defined(WIN32)
-    return { -1, -1, 400, 0 };
-#else
-    return { -1, -1, 50, 0 };
-#endif
-}
-
-void cataimgui::message_box::draw_controls()
-{
-    ImGui::Indent( 1.0f );
-    nc_color tcolor = c_light_gray;
-    draw_colored_text( prompt, tcolor, cataimgui::text_align::Left, ImGui::GetContentRegionAvail().x );
-    ImGui::Unindent( 1.0f );
-    if( ImGui::IsKeyDown( ImGuiKey_Escape ) ) {
-        if( buttons == mbox_btn::BT_OKCancel || buttons == mbox_btn::BT_YesNoCancel ) {
-            result = dialog_result::CancelClicked;
-        } else if( buttons == mbox_btn::BT_YesNo ) {
-            result = dialog_result::NoClicked;
-        } else if( buttons == mbox_btn::BT_OK ) {
-            result = dialog_result::OKClicked;
-        }
-    }
-    if( buttons == mbox_btn::BT_OK || buttons == mbox_btn::BT_OKCancel ) {
-        draw_mbox_btn( _( "OK" ), dialog_result::OKClicked );
-        ImGui::SameLine();
-    }
-    if( buttons == mbox_btn::BT_YesNo || buttons == mbox_btn::BT_YesNoCancel ) {
-        draw_mbox_btn( _( "Yes" ), dialog_result::YesClicked );
-        ImGui::SameLine();
-        draw_mbox_btn( _( "No" ), dialog_result::NoClicked );
-        ImGui::SameLine();
-    }
-    if( buttons == mbox_btn::BT_YesNoCancel || buttons == mbox_btn::BT_OKCancel ) {
-        draw_mbox_btn( _( "Cancel" ), dialog_result::CancelClicked );
-    }
-    if( !is_draw_callback_set() && result != dialog_result::None ) {
-        close();
-    }
-}
-
-cataimgui::string_input_box::string_input_box( const std::string &title,
-        const std::string &prompt ) : popup( title, true )
-{
-    input.fill( 0 ); // terminate our input buffer
-    this->id = title;
-    this->prompt = prompt;
-}
-
-cataimgui::dialog_result cataimgui::string_input_box::show( const std::string &prompt,
-        std::string &input )
-{
-    input_context ctx( "INPUT_BOX" );
-    ctx.register_action( "ANY_INPUT" );
-    string_input_box input_box( "Input", prompt );
-    while( input_box.get_result() == dialog_result::None ) {
-        ctx.handle_input();
-    }
-    if( input_box.get_result() == dialog_result::OKClicked ) {
-        input.assign( input_box.get_input() );
-    }
-    return input_box.get_result();
-}
-
-std::string cataimgui::string_input_box::get_input()
-{
-    return std::string( input.begin(), input.end() );
-}
-
-void cataimgui::string_input_box::draw_controls()
-{
-    ImGui::Text( "%s", prompt.c_str() );
-    ImGui::SameLine();
-    if( !ImGui::IsAnyItemActive() ) {
-        ImGui::SetKeyboardFocusHere( 0 );
-    }
-    ImGui::InputText( "##inputtext", input.data(), input.max_size() );
-    if( ImGui::Button( _( "OK" ) ) || ImGui::IsKeyDown( ImGuiKey_Enter ) ) {
-        result = dialog_result::OKClicked;
-    }
-    ImGui::SameLine();
-    if( ImGui::Button( _( "Cancel" ) ) || ImGui::IsKeyDown( ImGuiKey_Escape ) ) {
-        result = dialog_result::CancelClicked;
-    }
-}
-
-
-cataimgui::list_selector::list_selector( const std::string &id ) : cataimgui::popup( id, true )
-{
-}
-
-void cataimgui::list_selector::add( const cataimgui::list_selector::litem &it )
-{
-    items.push_back( it );
-}
-
-void cataimgui::list_selector::add( std::initializer_list<cataimgui::list_selector::litem> &items )
-{
-    this->items.insert( this->items.end(), items.begin(), items.end() );
-}
-
-int cataimgui::list_selector::get_selected_index() const
-{
-    return selected_index;
-}
-
-void cataimgui::list_selector::draw_controls()
-{
-    int index_tmp = 0;
-    for( cataimgui::list_selector::litem &it : items ) {
-        ImGui::PushID( it.text.c_str() );
-        if( it.is_enabled ) {
-            ImGui::Selectable( "", &it.is_selected );
-        } else {
-            ImGui::Text( "%s", "" );
-        }
-        ImGui::SameLine( 0, 0 );
-        nc_color tcolor = c_light_gray;
-        draw_colored_text( it.text, tcolor );
-        ImGui::PopID();
-        if( it.is_selected ) {
-            selected_index = index_tmp;
-            result = dialog_result::OKClicked;
-            close();
-        }
-        index_tmp++;
-    }
 }
