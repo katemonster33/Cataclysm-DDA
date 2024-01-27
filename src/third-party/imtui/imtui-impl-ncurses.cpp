@@ -320,7 +320,7 @@ void ImTui_ImplNcurses_DrawScreen( bool active )
         nActiveFrames = 10;
     }
 
-    //wrefresh(imtui_win);
+    wrefresh(imtui_win);
 
     std::vector<ImRect> window_bounds;
     for( ImGuiWindow *win : ImGui::GetCurrentContext()->Windows ) {
