@@ -341,7 +341,7 @@ cataimgui::window::window( int window_flags )
     p_impl = nullptr;
 
     this->window_flags = window_flags | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
-                         ImGuiWindowFlags_NoSavedSettings;
+                         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavFocus;
 }
 
 cataimgui::window::window( const std::string &title, int window_flags ) : window( window_flags )

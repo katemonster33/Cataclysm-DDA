@@ -42,7 +42,7 @@ class query_popup_impl : public cataimgui::window
                 return { -1.f, -1.f, -1.f, -1.f };
             } else {
                 return { -1.f, -1.f,
-                         float( msg_width ) + ( ImGui::GetStyle().WindowBorderSize * 2 ), -1.f };
+                         float( msg_width ) + ( ImGui::GetStyle().WindowBorderSize * 2 ), parent->ontop ? 0 : -1.f };
             }
         }
 };
@@ -330,6 +330,7 @@ query_popup::result query_popup::query_once()
     // Assign outside construction of `res` to ensure execution order
     res.wait_input = !anykey;
     do {
+        ui_manager::redraw();
         res.action = ctxt.handle_input();
         res.evt = ctxt.get_raw_input();
 

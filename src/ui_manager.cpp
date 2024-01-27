@@ -337,7 +337,7 @@ void ui_adaptor::redraw()
 
 extern std::unique_ptr<cataimgui::client> imclient;
 
-void ui_adaptor::redraw_invalidated( bool draw_imgui )
+void ui_adaptor::redraw_invalidated( )
 {
     if( test_mode || ui_stack.empty() ) {
         return;
@@ -365,7 +365,6 @@ void ui_adaptor::redraw_invalidated( bool draw_imgui )
                 break;
             }
         }
-        bool imgui_is_on_top = ui_stack.back().get().is_imgui;
 
         // Avoid a copy if possible to improve performance. `ui_stack_orig`
         // always contains the original UI stack, and `first_enabled` always points
@@ -409,7 +408,7 @@ void ui_adaptor::redraw_invalidated( bool draw_imgui )
         if( !restart_redrawing ) {
             for( auto it = first_enabled; !needs_redraw && it != ui_stack_orig->end(); ++it ) {
                 const ui_adaptor &ui = *it;
-                if( ( ui.invalidated && ui.redraw_cb ) || ( draw_imgui && ui.is_imgui ) ) {
+                if( ( ui.invalidated && ui.redraw_cb ) || ui.is_imgui ) {
                     needs_redraw = true;
                 }
             }
@@ -424,7 +423,7 @@ void ui_adaptor::redraw_invalidated( bool draw_imgui )
             std::optional<point> cursor_pos;
             for( auto it = first_enabled; !restart_redrawing && it != ui_stack_orig->end(); ++it ) {
                 ui_adaptor &ui = *it;
-                if( ui.is_imgui && draw_imgui && imgui_is_on_top ) {
+                if( ui.is_imgui ) {
                     if( ui.redraw_cb ) {
                         ui.redraw_cb( ui );
                     }
