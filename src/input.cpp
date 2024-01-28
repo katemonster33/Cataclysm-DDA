@@ -1444,7 +1444,7 @@ void keybindings_ui::draw_controls()
         ImGui::SameLine();
         std::string button_text_no_color = remove_color_tags( buttons[legend_idx].second );
         ImGui::SetCursorPosX( str_width_to_pixels( width ) - ( get_text_width(
-                                  button_text_no_color.c_str() ) +
+                                  button_text_no_color ) +
                               ( ImGui::GetStyle().FramePadding.x * 2 ) + ImGui::GetStyle().ItemSpacing.x ) );
         action_button( buttons[legend_idx].first, button_text_no_color );
     }

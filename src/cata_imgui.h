@@ -83,7 +83,7 @@ class window
         virtual void draw();
         virtual void on_resized() {}
         bool is_resized();
-        size_t get_text_width( const char *text );
+        size_t get_text_width( const std::string &text );
         size_t str_width_to_pixels( size_t len );
         size_t str_height_to_pixels( size_t len );
 

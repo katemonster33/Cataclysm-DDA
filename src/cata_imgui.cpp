@@ -359,10 +359,10 @@ bool cataimgui::window::is_resized()
     return p_impl->is_resized;
 }
 
-size_t cataimgui::window::get_text_width( const char *text )
+size_t cataimgui::window::get_text_width( const std::string &text )
 {
 #if defined(WIN32) || defined(TILES)
-    return ImGui::CalcTextSize( text ).x;
+    return ImGui::CalcTextSize( text.c_str() ).x;
 #else
     return utf8_width( text, true );
 #endif

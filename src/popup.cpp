@@ -103,7 +103,7 @@ void query_popup_impl::on_resized()
     // Calculate size of message part
     msg_width = 0;
     for( const auto &line : parent->folded_msg ) {
-        msg_width = std::max( msg_width, get_text_width( line.c_str() ) ); //utf8_width( line, true ) );
+        msg_width = std::max( msg_width, get_text_width( line ) ); //utf8_width( line, true ) );
     }
 
     // Calculate width with query buttons
@@ -111,7 +111,7 @@ void query_popup_impl::on_resized()
         if( !line.empty() ) {
             int button_width = 0;
             for( const auto &opt : line ) {
-                button_width += get_text_width( opt.c_str() );
+                button_width += get_text_width( opt );
             }
             msg_width = std::max( msg_width, button_width +
                                   horz_padding * ( line.size() - 1 ) );
@@ -126,7 +126,7 @@ void query_popup_impl::on_resized()
             if( !line.empty() ) {
                 int button_width = 0;
                 for( const auto &opt : line ) {
-                    button_width += get_text_width( opt.c_str() );
+                    button_width += get_text_width( opt );
                 }
                 // Right align.
                 // TODO: multi-line buttons
@@ -134,7 +134,7 @@ void query_popup_impl::on_resized()
                                             horz_padding * ( line.size() - 1 ) ) );
                 for( const auto &opt : line ) {
                     parent->buttons.emplace_back( opt, point( button_x, 0 ) );
-                    button_x += get_text_width( opt.c_str() ) + horz_padding;
+                    button_x += get_text_width( opt ) + horz_padding;
                 }
             }
         }
