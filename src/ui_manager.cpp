@@ -453,7 +453,6 @@ void ui_adaptor::redraw_invalidated( )
     imclient->end_frame();
 }
 
-
 void ui_adaptor::screen_resized()
 {
     // Always mark every UI for resize even if it is below another UI with
