@@ -457,7 +457,7 @@ bool cataimgui::window::has_button_action()
 
 std::string cataimgui::window::get_button_action()
 {
-    return std::string( button_action );
+    return button_action;
 }
 
 cataimgui::bounds cataimgui::window::get_bounds()
