@@ -408,7 +408,7 @@ void ui_adaptor::redraw_invalidated( )
         if( !restart_redrawing ) {
             for( auto it = first_enabled; !needs_redraw && it != ui_stack_orig->end(); ++it ) {
                 const ui_adaptor &ui = *it;
-                if( ( ui.invalidated && ui.redraw_cb ) || ui.is_imgui ) {
+                if( ( ui.invalidated || ui.is_imgui ) && ui.redraw_cb ) {
                     needs_redraw = true;
                 }
             }
