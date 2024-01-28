@@ -41,8 +41,8 @@ class query_popup_impl : public cataimgui::window
             if( parent->buttons.empty() ) {
                 return { -1.f, -1.f, -1.f, -1.f };
             } else {
-                return { -1.f, -1.f,
-                         float( msg_width ) + ( ImGui::GetStyle().WindowBorderSize * 2 ), parent->ontop ? 0 : -1.f };
+                return { -1.f, parent->ontop ? 0 : -1.f,
+                         float( msg_width ) + ( ImGui::GetStyle().WindowBorderSize * 2 ), -1.f };
             }
         }
 };
@@ -89,14 +89,15 @@ void query_popup_impl::on_resized()
 {
     constexpr size_t horz_padding = 2;
     // constexpr size_t vert_padding = 1;
-    size_t max_line_width = str_width_to_pixels( FULL_SCREEN_WIDTH - 1 * 2 );
+    size_t max_line_str_len = FULL_SCREEN_WIDTH - 1 * 2;
+    size_t max_line_pixel_width = str_width_to_pixels( max_line_str_len );
 
     // Fold message text
-    parent->folded_msg = foldstring( parent->text, max_line_width );
+    parent->folded_msg = foldstring( parent->text, max_line_str_len );
 
     // Fold query buttons
     const auto &folded_query = parent->fold_query( parent->category, parent->pref_kbd_mode,
-                               parent->options, max_line_width,
+                               parent->options, max_line_str_len,
                                horz_padding );
 
     // Calculate size of message part
@@ -116,7 +117,7 @@ void query_popup_impl::on_resized()
                                   horz_padding * ( line.size() - 1 ) );
         }
     }
-    msg_width = std::min( msg_width, max_line_width ) * 1.1; // add some margin
+    msg_width = std::min( msg_width, max_line_pixel_width ) * 1.1; // add some margin
 
     // Calculate height with query buttons & button positions
     parent->buttons.clear();
@@ -435,13 +436,6 @@ query_popup::button::button( const std::string &text, const point &p )
     : text( text ), pos( p )
 {
     width = utf8_width( text, true );
-}
-
-bool query_popup::button::contains( const point &p ) const
-{
-    return p.x >= pos.x + 1 &&
-           p.x < pos.x + width + 1 &&
-           p.y == pos.y + 1;
 }
 
 static_popup::static_popup()

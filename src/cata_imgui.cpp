@@ -10,6 +10,7 @@
 #include "input.h"
 #include "output.h"
 #include "ui_manager.h"
+#include "catacharset.h"
 
 #if !(defined(TILES) || defined(WIN32))
 #include <curses.h>
@@ -338,22 +339,19 @@ class cataimgui::window_impl
 
 cataimgui::window::window( int window_flags )
 {
-    p_impl = nullptr;
-
     this->window_flags = window_flags | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
                          ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavFocus;
 }
 
-cataimgui::window::window( const std::string &title, int window_flags ) : window( window_flags )
+cataimgui::window::window( const std::string &id_, int window_flags ) : window( window_flags )
 {
-    p_impl = new cataimgui::window_impl( this );
-    id = title;
+    p_impl = std::make_unique<cataimgui::window_impl>( this );
+    id = id_;
     is_open = true;
 }
 
 cataimgui::window::~window()
 {
-    delete p_impl;
 }
 
 bool cataimgui::window::is_resized()
@@ -366,16 +364,7 @@ size_t cataimgui::window::get_text_width( const char *text )
 #if defined(WIN32) || defined(TILES)
     return ImGui::CalcTextSize( text ).x;
 #else
-    return strlen( text );
-#endif
-}
-
-size_t cataimgui::window::get_text_height( const char *text )
-{
-#if defined(WIN32) || defined(TILES)
-    return ImGui::CalcTextSize( "0" ).y * strlen( text );
-#else
-    return strlen( text );
+    return utf8_width( text, true );
 #endif
 }
 

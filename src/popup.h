@@ -11,11 +11,8 @@
 #include <vector>
 
 #include "color.h"
-#include "cursesdef.h"
 #include "input.h"
-#include "point.h"
-#include "string_formatter.h"
-#include "pimpl.h"
+#include "cursesdef.h"
 
 class ui_adaptor;
 class query_popup_impl;
@@ -198,8 +195,7 @@ class query_popup
         catacurses::window get_window();
     protected:
         /**
-         * Create or get a ui_adaptor on the UI stack to handle redrawing and
-         * resizing of the popup.
+         * Create or get the ImGui-backed UI implementation.
          */
         std::shared_ptr<query_popup_impl> create_or_get_impl();
 
@@ -225,7 +221,6 @@ class query_popup
 
         struct button {
             button( const std::string &text, const point & );
-            bool contains( const point &p ) const;
 
             std::string text;
             point pos;

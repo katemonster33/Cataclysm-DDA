@@ -63,12 +63,12 @@ class client
 
 class window
 {
-        class window_impl *p_impl;
+        std::unique_ptr<class window_impl> p_impl;
         bounds cached_bounds;
     protected:
         explicit window( int window_flags = 0 );
     public:
-        explicit window( const std::string &title, int window_flags = 0 );
+        explicit window( const std::string &id_, int window_flags = 0 );
         virtual ~window();
         void draw_colored_text( std::string const &text, const nc_color &color,
                                 text_align alignment = text_align::Left, float max_width = 0.0F, bool *is_selected = nullptr,
@@ -79,13 +79,11 @@ class window
         bool action_button( const std::string &action, const std::string &text );
         bool has_button_action();
         std::string get_button_action();
-        void draw_header( std::string const &text );
         bool get_is_open() const;
         virtual void draw();
         virtual void on_resized() {}
         bool is_resized();
         size_t get_text_width( const char *text );
-        size_t get_text_height( const char *text );
         size_t str_width_to_pixels( size_t len );
         size_t str_height_to_pixels( size_t len );
 
