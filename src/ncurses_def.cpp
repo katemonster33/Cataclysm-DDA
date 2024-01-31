@@ -342,7 +342,7 @@ void catacurses::init_interface()
     // ncurses mouse registration
     mouseinterval( 0 );
     mousemask( ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, nullptr );
-    // Sometimes the TERM variable is not set properly and mousemask won't turn on mouse pointer events. 
+    // Sometimes the TERM variable is not set properly and mousemask won't turn on mouse pointer events.
     // The below line tries to force the mouse pointer events to be turned on anyway. ImTui misbehaves without them.
     printf( "\033[?1003h\n" ); 
 #endif
