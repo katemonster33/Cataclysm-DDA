@@ -393,7 +393,7 @@ void ImTui_ImplNcurses_DrawScreen( bool active )
         memcpy( screenPrev.data, g_screen->data, nx * ny * sizeof( ImTui::TCell ) );
     }
 
-    g_vsync.wait( nActiveFrames -- > 0 );
+    //g_vsync.wait( nActiveFrames -- > 0 );
 }
 
 bool ImTui_ImplNcurses_ProcessEvent()
