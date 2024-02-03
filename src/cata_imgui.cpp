@@ -386,10 +386,12 @@ size_t cataimgui::window::str_height_to_pixels( size_t len )
 #endif
 }
 
-void cataimgui::window::mark_bounds_changed()
+void cataimgui::window::mark_resized()
 {
     if( p_impl ) {
         p_impl->is_resized = true;
+
+        p_impl->window_adaptor->mark_resize();
     }
 }
 

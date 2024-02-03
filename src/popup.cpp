@@ -139,7 +139,6 @@ void query_popup_impl::on_resized()
             }
         }
     }
-    mark_bounds_changed();
 }
 
 query_popup::query_popup()
@@ -274,7 +273,7 @@ void query_popup::invalidate_ui() const
     }
     std::shared_ptr<query_popup_impl> ui = p_impl.lock();
     if( ui ) {
-        ui->on_resized();
+        ui->mark_resized();
     }
 }
 

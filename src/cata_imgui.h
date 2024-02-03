@@ -86,6 +86,7 @@ class window
         size_t get_text_width( const std::string &text );
         size_t str_width_to_pixels( size_t len );
         size_t str_height_to_pixels( size_t len );
+        void mark_resized();
 
     protected:
         bool is_open;
@@ -94,7 +95,6 @@ class window
         std::string button_action;
         virtual bounds get_bounds();
         virtual void draw_controls() = 0;
-        void mark_bounds_changed();
 };
 
 #if !(defined(TILES) || defined(WIN32))
