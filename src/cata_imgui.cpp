@@ -407,9 +407,15 @@ void cataimgui::window::draw()
         // we want to make sure is_resized is able to be handled for at least a full frame
         handled_resize = true;
     }
-    if( cached_bounds.x == -1 && cached_bounds.y == -1 )             {
+    if( cached_bounds.x == -1 || cached_bounds.y == -1 )             {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, { 0.5, 0.5 } );
+        if( cached_bounds.x != -1.f ) {
+            center.x = cached_bounds.x;
+        }
+        if( cached_bounds.y != -1.f ) {
+            center.y = cached_bounds.y;
+        }
+        ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, { cached_bounds.x == -1.f ? 0.5f : 0.f,  cached_bounds.y == -1.f ? 0.5f : 0.f } );
     } else if( cached_bounds.x >= 0 && cached_bounds.y >= 0 ) {
         ImGui::SetNextWindowPos( { cached_bounds.x, cached_bounds.y } );
     }
