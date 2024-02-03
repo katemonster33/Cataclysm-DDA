@@ -82,7 +82,7 @@ class window
         bool get_is_open() const;
         virtual void draw();
         virtual void on_resized() {}
-        bool is_resized();
+        bool is_bounds_changed();
         size_t get_text_width( const std::string &text );
         size_t str_width_to_pixels( size_t len );
         size_t str_height_to_pixels( size_t len );

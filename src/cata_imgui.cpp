@@ -354,7 +354,7 @@ cataimgui::window::~window()
 {
 }
 
-bool cataimgui::window::is_resized()
+bool cataimgui::window::is_bounds_changed()
 {
     return p_impl->is_resized;
 }
@@ -402,7 +402,7 @@ void cataimgui::window::draw()
         return;
     }
     bool handled_resize = false;
-    if( is_resized() ) {
+    if( is_bounds_changed() ) {
         cached_bounds = get_bounds();
         // we want to make sure is_resized is able to be handled for at least a full frame
         handled_resize = true;
