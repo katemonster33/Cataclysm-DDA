@@ -34,7 +34,7 @@
 #include <string>
 #include <thread>
 
-static WINDOW *imtui_win = nullptr;
+WINDOW* imtui_win = nullptr;
 
 namespace
 {
@@ -107,8 +107,7 @@ ImTui::TScreen *ImTui_ImplNcurses_Init( float fps_active, float fps_idle )
     fps_idle = std::min( fps_active, fps_idle );
     g_vsync = VSync( fps_active, fps_idle );
 
-    imtui_win = stdscr;
-
+    imtui_win = newwin(LINES, COLS, 0, 0);
     ImGui::GetIO().KeyMap[ImGuiKey_Tab]         = 9;
     ImGui::GetIO().KeyMap[ImGuiKey_LeftArrow]   = 260;
     ImGui::GetIO().KeyMap[ImGuiKey_RightArrow]  = 261;
@@ -138,7 +137,7 @@ ImTui::TScreen *ImTui_ImplNcurses_Init( float fps_active, float fps_idle )
     int screenSizeX = 0;
     int screenSizeY = 0;
 
-    getmaxyx( imtui_win, screenSizeY, screenSizeX );
+    getmaxyx( stdscr, screenSizeY, screenSizeX );
     ImGui::GetIO().DisplaySize = ImVec2( screenSizeX, screenSizeY );
 
     return g_screen;
@@ -320,7 +319,6 @@ void ImTui_ImplNcurses_DrawScreen( bool active )
         nActiveFrames = 10;
     }
 
-    wrefresh(imtui_win);
 
     std::vector<ImRect> window_bounds;
     for( ImGuiWindow *win : ImGui::GetCurrentContext()->Windows ) {
@@ -337,7 +335,7 @@ void ImTui_ImplNcurses_DrawScreen( bool active )
     }
 
     int ic = 0;
-
+    wmove(imtui_win, 0, 0);
     for( int y = 0; y < ny; ++y ) {
         bool isSame = compare;
         if( compare ) {
@@ -348,11 +346,10 @@ void ImTui_ImplNcurses_DrawScreen( bool active )
                 }
             }
         }
-        if( isSame ) {
-            continue;
-        }
+        //if( isSame ) {
+        //    continue;
+        //}
         bool wmove_needed = true;
-
         constexpr int no_lastp = 0x7FFFFFFF;
         int lastp = no_lastp;
         for( int x = 0; x < nx; ++x ) {
@@ -390,6 +387,7 @@ void ImTui_ImplNcurses_DrawScreen( bool active )
             memcpy( screenPrev.data + y * nx, g_screen->data + y * nx, nx * sizeof( ImTui::TCell ) );
         }
     }
+    wrefresh(imtui_win);
 
     if( !compare ) {
         memcpy( screenPrev.data, g_screen->data, nx * ny * sizeof( ImTui::TCell ) );
