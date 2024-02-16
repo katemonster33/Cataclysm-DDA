@@ -339,7 +339,8 @@ cataimgui::window::window( int window_flags )
     p_impl = nullptr;
 
     this->window_flags = window_flags | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
-                         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavFocus;
+                         ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavFocus |
+                         ImGuiWindowFlags_NoBringToFrontOnFocus;
 }
 
 cataimgui::window::window( const std::string &id_, int window_flags ) : window( window_flags )
@@ -414,7 +415,7 @@ void cataimgui::window::draw()
         // we want to make sure is_resized is able to be handled for at least a full frame
         handled_resize = true;
     }
-    if( cached_bounds.x == -1 || cached_bounds.y == -1 )             {
+    if( cached_bounds.x == -1 || cached_bounds.y == -1 ) {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         if( cached_bounds.x != -1.f ) {
             center.x = cached_bounds.x;
@@ -431,6 +432,9 @@ void cataimgui::window::draw()
     }
     if( ImGui::Begin( id.c_str(), &is_open, window_flags ) ) {
         draw_controls();
+        if( p_impl->window_adaptor->is_on_top ) {
+            ImGui::BringWindowToDisplayFront( ImGui::GetCurrentWindow() );
+        }
     }
     ImGui::End();
     if( handled_resize ) {

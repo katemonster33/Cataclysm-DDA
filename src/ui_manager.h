@@ -75,6 +75,7 @@ class ui_adaptor
 {
     public:
         bool is_imgui;
+        bool is_on_top;
         using redraw_callback_t = std::function<void( ui_adaptor & )>;
         using screen_resize_callback_t = std::function<void( ui_adaptor & )>;
 
