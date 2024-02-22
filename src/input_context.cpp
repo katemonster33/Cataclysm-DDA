@@ -565,6 +565,7 @@ keybindings_ui::keybindings_ui( bool permit_execute_action,
     legend.push_back( colorize( _( "Unbound keys" ), unbound_key ) );
     legend.push_back( colorize( _( "Keybinding active only on this screen" ), local_key ) );
     legend.push_back( colorize( _( "Keybinding active globally" ), global_key ) );
+    legend.push_back( colorize( _( "* User created" ), global_key ) );
     if( permit_execute_action ) {
         legend.push_back( string_format(
                               _( "Press %c to execute action\n" ),
@@ -630,6 +631,9 @@ void keybindings_ui::draw_controls()
             bool overwrite_default;
             const action_attributes &attributes = inp_mngr.get_action_attributes( action_id, ctxt->category,
                                                   &overwrite_default );
+            bool basic_overwrite_default;
+            const action_attributes &basic_attributes = inp_mngr.get_action_attributes( action_id,
+                    ctxt->category, &basic_overwrite_default, true );
 
             ImGui::TableNextColumn();
             ImGui::Text( " " );
@@ -649,13 +653,13 @@ void keybindings_ui::draw_controls()
             if( status == s_add_global && overwrite_default ) {
                 // We're trying to add a global, but this action has a local
                 // defined, so gray out the invlet.
-                key_text = colorize( string_format( "%c ", invlet ), c_dark_gray );
+                key_text = colorize( string_format( "%c", invlet ), c_dark_gray );
             } else if( status == s_add || status == s_add_global || status == s_remove ) {
-                key_text = colorize( string_format( "%c ", invlet ), c_light_blue );
+                key_text = colorize( string_format( "%c", invlet ), c_light_blue );
             } else if( status == s_execute ) {
-                key_text = colorize( string_format( "%c ", invlet ), c_white );
+                key_text = colorize( string_format( "%c", invlet ), c_white );
             } else {
-                key_text = "  ";
+                key_text = " ";
             }
             nc_color col;
             if( attributes.input_events.empty() ) {
@@ -664,6 +668,13 @@ void keybindings_ui::draw_controls()
                 col = i == size_t( highlight_row_index ) ? h_local_key : local_key;
             } else {
                 col = i == size_t( highlight_row_index ) ? h_global_key : global_key;
+            }
+            if( overwrite_default != basic_overwrite_default
+                || attributes.input_events != basic_attributes.input_events
+              ) {
+                key_text += "*";
+            } else {
+                key_text += " ";
             }
             key_text += string_format( "%s:", ctxt->get_action_name( action_id ) );
             bool is_selected = false;
