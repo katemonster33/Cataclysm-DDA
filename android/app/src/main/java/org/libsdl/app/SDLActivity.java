@@ -16,6 +16,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.hardware.Sensor;
 import android.net.Uri;
@@ -43,6 +44,7 @@ import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
+import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -61,7 +63,7 @@ import java.util.Locale;
 public class SDLActivity extends Activity implements View.OnSystemUiVisibilityChangeListener {
     private static final String TAG = "SDL";
     private static final int SDL_MAJOR_VERSION = 2;
-    private static final int SDL_MINOR_VERSION = 31;
+    private static final int SDL_MINOR_VERSION = 30;
     private static final int SDL_MICRO_VERSION = 0;
 /*
     // Display InputType.SOURCE/CLASS of events and devices
@@ -928,9 +930,9 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     public static native void nativeResume();
     public static native void nativeFocusChanged(boolean hasFocus);
     public static native void onNativeDropFile(String filename);
-    public static native void nativeSetScreenResolution(int surfaceWidth, int surfaceHeight, int deviceWidth, int deviceHeight, int format, float rate);
-
-    public static native void onNativeVisibleDisplayFrameChanged(int left, int top, int right, int bottom);    public static native void onNativeResize();
+    public static native void nativeSetScreenResolution(int surfaceWidth, int surfaceHeight, int deviceWidth, int deviceHeight, float rate);
+    public static native void onNativeResize();
+    public static native void onNativeVisibleDisplayFrameChanged(int left, int top, int right, int bottom);
     public static native void onNativeKeyDown(int keycode);
     public static native void onNativeKeyUp(int keycode);
     public static native boolean onNativeSoftReturnKey();
