@@ -327,7 +327,7 @@ bool ui_adaptor::has_imgui()
     }
     return false;
 }
-#include "imgui/imgui.h"
+
 void ui_adaptor::redraw()
 {
     if( !ui_stack.empty() ) {

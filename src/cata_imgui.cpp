@@ -11,7 +11,7 @@
 #include "output.h"
 #include "ui_manager.h"
 
-ImGuiKey cata_key_to_imgui( int cata_key );
+static ImGuiKey cata_key_to_imgui( int cata_key );
 
 #if !(defined(TILES) || defined(WIN32))
 #include <curses.h>
@@ -208,7 +208,7 @@ void cataimgui::client::process_input( void *input )
 
 #endif
 
-ImGuiKey cata_key_to_imgui( int cata_key )
+static ImGuiKey cata_key_to_imgui( int cata_key )
 {
     switch( cata_key ) {
         case KEY_UP:
