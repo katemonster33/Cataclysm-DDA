@@ -267,7 +267,7 @@ static void WinCreate()
 #endif
 #if defined(EMSCRIPTEN) || defined(__ANDROID__)
     // Without this, the game only displays in the top-left 1/4 of the window.
-    window_flags &= ~SDL_WINDOW_ALLOW_HIGHDPI;
+    window_flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP;
 #endif
 
     int display = std::stoi( get_option<std::string>( "DISPLAY" ) );
