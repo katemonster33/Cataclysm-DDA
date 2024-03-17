@@ -302,7 +302,7 @@ static void WinCreate()
                                       SDL_WINDOWPOS_CENTERED_DISPLAY( display ),
                                       WindowWidth,
                                       WindowHeight,
-                                      window_flags
+                                      window_flags | SDL_WINDOW_MAXIMIZED
                                     ) );
     throwErrorIf( !::window, "SDL_CreateWindow failed" );
 
