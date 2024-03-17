@@ -265,7 +265,7 @@ static void WinCreate()
         window_flags |= SDL_WINDOW_MAXIMIZED;
     }
 #endif
-#if defined(EMSCRIPTEN)
+#if defined(EMSCRIPTEN) || defined(__ANDROID__)
     // Without this, the game only displays in the top-left 1/4 of the window.
     window_flags &= ~SDL_WINDOW_ALLOW_HIGHDPI;
 #endif
@@ -302,7 +302,7 @@ static void WinCreate()
                                       SDL_WINDOWPOS_CENTERED_DISPLAY( display ),
                                       WindowWidth,
                                       WindowHeight,
-                                      window_flags | SDL_WINDOW_MAXIMIZED
+                                      window_flags
                                     ) );
     throwErrorIf( !::window, "SDL_CreateWindow failed" );
 
