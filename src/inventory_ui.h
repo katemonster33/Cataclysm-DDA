@@ -16,7 +16,6 @@
 
 #include "color.h"
 #include "cuboid_rectangle.h"
-#include "cursesdef.h"
 #include "debug.h"
 #include "input_context.h"
 #include "item_category.h"
@@ -33,7 +32,7 @@ class item;
 class item_stack;
 class string_input_popup;
 class tinymap;
-class ui_adaptor;
+class inventory_ui_impl;
 
 enum class navigation_mode : int {
     ITEM = 0,
@@ -336,6 +335,7 @@ const inventory_selector_preset default_preset;
 
 class inventory_column
 {
+    friend class inventory_ui_impl;
     public:
         explicit inventory_column( const inventory_selector_preset &preset = default_preset );
 
@@ -603,6 +603,7 @@ class selection_column : public inventory_column
 
 class inventory_selector
 {
+    friend class inventory_ui_impl;
     public:
         explicit inventory_selector( Character &u,
                                      const inventory_selector_preset &preset = default_preset );
@@ -707,7 +708,7 @@ class inventory_selector
         /** Entry has been changed */
         void on_change( const inventory_entry &entry );
 
-        shared_ptr_fast<ui_adaptor> create_or_get_ui_adaptor();
+        shared_ptr_fast<inventory_ui_impl> create_or_get_ui();
 
         size_t get_layout_width() const;
         size_t get_layout_height() const;
@@ -874,9 +875,7 @@ class inventory_selector
         const navigation_mode_data &get_navigation_data( navigation_mode m ) const;
 
     private:
-        catacurses::window w_inv;
-
-        weak_ptr_fast<ui_adaptor> ui;
+        weak_ptr_fast<inventory_ui_impl> ui;
 
         std::unique_ptr<string_input_popup> spopup;
 
@@ -1090,7 +1089,6 @@ class inventory_examiner : public inventory_selector
     protected:
         item_location parent_item;
         item_location selected_item;
-        catacurses::window w_examine;
         bool changes_made;
         bool parent_was_collapsed;
 

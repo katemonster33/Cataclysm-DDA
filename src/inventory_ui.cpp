@@ -69,8 +69,21 @@ static const item_category_id item_category_INTEGRATED( "INTEGRATED" );
 static const item_category_id item_category_ITEMS_WORN( "ITEMS_WORN" );
 static const item_category_id item_category_WEAPON_HELD( "WEAPON_HELD" );
 
-bool inventory_selector::chevron_hovered = false;
-const item_location *inventory_selector::entry_to_be_focused = nullptr;
+//bool inventory_selector::chevron_hovered = false;
+//const item_location *inventory_selector::entry_to_be_focused = nullptr;
+
+class inventory_ui_impl : cataimgui::window
+{
+    inventory_selector& parent;
+public:
+    inventory_ui_impl(inventory_selector& parent) : cataimgui::window( "INVENTORY_UI", ImGuiWindowFlags_AlwaysAutoResize ), parent(parent)
+    {
+    }
+
+    inventory_entry& draw_column( inventory_column* column );
+
+    void draw_controls() override;
+};
 
 namespace
 {
@@ -1630,171 +1643,7 @@ int inventory_column::reassign_custom_invlets( int cur_idx, const std::string_vi
     return cur_idx;
 }
 
-void inventory_column::draw( const catacurses::window &win, const point &p,
-                             std::vector<std::pair<inclusive_rectangle<point>, inventory_entry *>> &rect_entry_map )
-{
-    if( !visible() ) {
-        return;
-    }
-    const auto available_cell_width = [ this ]( inventory_entry const & entry, size_t cell_index ) {
-        const size_t displayed_width = cells[cell_index].current_width;
-        const size_t real_width = get_entry_cell_width( entry, cell_index );
-
-        return displayed_width > real_width ? displayed_width - real_width : 0;
-    };
-
-    // Do the actual drawing
-    for( size_t index = page_offset, line = 0; index < entries.size() &&
-         line < entries_per_page; ++index, ++line ) {
-        inventory_entry &entry = entries[index];
-
-        if( !entry ) {
-            continue;
-        }
-        const inventory_entry::entry_cell_cache_t &entry_cell_cache = entry.get_entry_cell_cache( preset );
-
-        int x1 = p.x + get_entry_indent( entry );
-        int x2 = p.x + std::max( static_cast<int>( reserved_width - get_cells_width() ), 0 );
-        int yy = p.y + line;
-
-        const bool selected = active && is_highlighted( entry );
-
-        const int hx_max = p.x + get_width();
-        inclusive_rectangle<point> rect = inclusive_rectangle<point>( point( x1, yy ),
-                                          point( hx_max - 1, yy ) );
-        rect_entry_map.emplace_back( rect,
-                                     &entry );
-
-        if( selected && visible_cells() > 1 ) {
-            for( int hx = x1; hx < hx_max; ++hx ) {
-                mvwputch( win, point( hx, yy ), h_white, ' ' );
-            }
-        }
-
-        cata_assert( entry.denial.has_value() );
-        const std::string &denial = *entry.denial;
-
-        if( !denial.empty() ) {
-            // Determine the width available for the first cell to print, then use that to trim the denial
-            const size_t first_cell_width = std::min( get_entry_cell_width( entry, 0 ),
-                                            x2 + cells[0].current_width - min_denial_gap );
-            const size_t max_denial_width = std::max( static_cast<int>( get_width() - ( min_denial_gap +
-                                            first_cell_width ) ), 0 );
-            const size_t denial_width = std::min( max_denial_width, static_cast<size_t>( utf8_width( denial,
-                                                  true ) ) );
-
-            if( denial_width > 0 ) {
-                /* Need to determine exact point to start printing from the left, since just trimming produces
-                 * artifacts on languages with wide characters, and right_print expects only a second column */
-                std::string trimmed = trim_by_length( denial, denial_width );
-                const int x = p.x + get_width() - utf8_width( remove_color_tags( trimmed ) );
-                nc_color temp = c_red;
-                print_colored_text( win, point( x, yy ), temp, c_red,
-                                    selected ? hilite_string( colorize( trimmed, c_red ) ) : trimmed );
-                entry.cached_denial_space = denial_width;
-            }
-        }
-
-        size_t count = denial.empty() ? cells.size() : 1;
-
-        for( size_t cell_index = 0; cell_index < count; ++cell_index ) {
-            if( !cells[cell_index].visible() ) {
-                continue; // Don't show empty cells
-            }
-
-            if( line != 0 && cell_index != 0 && entry.is_category() ) {
-                break; // Don't show duplicated titles
-            }
-
-            x2 += cells[cell_index].current_width;
-            std::string text = entry_cell_cache.text[cell_index];
-
-            size_t text_width = utf8_width( text, true );
-            size_t text_gap = cell_index > 0 ? std::max( cells[cell_index].gap(), min_cell_gap ) : 0;
-            size_t available_width = x2 - x1 - text_gap;
-
-            if( text_width > available_width ) {
-                // See if we can steal some of the needed width from an adjacent cell
-                if( cell_index == 0 && count >= 2 ) {
-                    available_width += available_cell_width( entry, 1 );
-                } else if( cell_index > 0 ) {
-                    available_width += available_cell_width( entry, cell_index - 1 );
-                }
-                text_width = std::min( text_width, available_width );
-            }
-
-            if( text_width > 0 ) {
-                const int text_x = cell_index == 0 ? x1 : x2 -
-                                   text_width; // Align either to the left or to the right
-
-                const std::string &hl_option = get_option<std::string>( "INVENTORY_HIGHLIGHT" );
-                if( cell_index == 0 && entry.chevron ) {
-                    bool const hide_override = hide_entries_override && entry.any_item()->is_container();
-                    nc_color const col = entry.is_collation_header() ? c_light_blue : hide_override ?
-                                         *hide_entries_override ? c_red : c_green : c_dark_gray;
-                    bool const stat = entry.is_collation_entry() ||
-                                      !hide_override ? entry.collapsed : *hide_entries_override;
-                    trim_and_print( win, point( text_x - 1, yy ), 1, col,
-                                    stat ? "▶" : "▼" );
-                }
-                if( entry.is_item() && ( selected || !entry.is_selectable() ) ) {
-                    trim_and_print( win, point( text_x, yy ), text_width, selected ? h_white : c_dark_gray,
-                                    remove_color_tags( text ) );
-                } else if( entry.is_item() && entry.highlight_as_parent ) {
-                    if( hl_option == "symbol" ) {
-                        trim_and_print( win, point( text_x - 1, yy ), 1, h_white, "<" );
-                        trim_and_print( win, point( text_x, yy ), text_width, entry_cell_cache.color, text );
-                    } else {
-                        trim_and_print( win, point( text_x, yy ), text_width, c_white_white,
-                                        remove_color_tags( text ) );
-                    }
-                    entry.highlight_as_parent = false;
-                } else if( entry.is_item() && entry.highlight_as_child ) {
-                    if( hl_option == "symbol" ) {
-                        trim_and_print( win, point( text_x - 1, yy ), 1, h_white, ">" );
-                        trim_and_print( win, point( text_x, yy ), text_width, entry_cell_cache.color, text );
-                    } else {
-                        trim_and_print( win, point( text_x, yy ), text_width, c_black_white,
-                                        remove_color_tags( text ) );
-                    }
-                    entry.highlight_as_child = false;
-                } else {
-                    trim_and_print( win, point( text_x, yy ), text_width, entry_cell_cache.color, text );
-                }
-            }
-
-            x1 = x2;
-        }
-
-        if( entry.is_item() ) {
-            int xx = p.x;
-            if( entry.get_invlet() != '\0' ) {
-                mvwputch( win, point( p.x, yy ), entry.get_invlet_color(), entry.get_invlet() );
-            }
-            xx += 2;
-            if( get_option<bool>( "ITEM_SYMBOLS" ) ) {
-                const nc_color color = entry.any_item()->color();
-                mvwputch( win, point( xx, yy ), color, entry.any_item()->symbol() );
-                xx += 2;
-            }
-            if( allows_selecting() && activatable() && multiselect ) {
-                if( entry.chosen_count == 0 ) {
-                    mvwputch( win, point( xx, yy ), c_dark_gray, '-' );
-                } else if( entry.chosen_count >= entry.get_available_count() ) {
-                    mvwputch( win, point( xx, yy ), c_light_green, '+' );
-                } else {
-                    mvwputch( win, point( xx, yy ), c_light_green, '#' );
-                }
-            }
-        }
-    }
-
-    if( pages_count() > 1 ) {
-        mvwprintw( win, p + point( 0, height - 1 ), _( "Page %d/%d" ), page_index() + 1, pages_count() );
-    }
-}
-
-inventory_entry &inventory_selector::draw_column( inventory_column *column )
+inventory_entry & inventory_ui_impl::draw_column( inventory_column *column )
 {
     bool any_chevron = std::any_of( column->entries.begin(),
     column->entries.end(), []( inventory_entry & ent ) {
@@ -1809,7 +1658,7 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column )
     static inventory_entry dummy( nullptr );
     inventory_entry &ent = dummy;
     for( inventory_entry &entry : column->entries ) {
-        const inventory_entry::entry_cell_cache_t &cache = entry.get_entry_cell_cache( preset );
+        const inventory_entry::entry_cell_cache_t &cache = entry.get_entry_cell_cache( parent.preset );
         ImGui::PushID( &entry );
         int indent = column->get_entry_indent( entry );
         ImGui::Indent( indent );
@@ -1819,8 +1668,8 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column )
                               !hide_override ? entry.collapsed : *column->hide_entries_override;
             ImGui::Text( stat ? "▶" : "▼" );
             if( ImGui::IsItemHovered() ) {
-                chevron_hovered = true;
-                mouse_hovered_entry = &entry;
+                //chevron_hovered = true;
+                //mouse_hovered_entry = &entry;
             }
             ImGui::SameLine();
         } else if( any_chevron ) {
@@ -1844,9 +1693,9 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column )
             ImVec2 orig_cpos = ImGui::GetCursorPos();
             float current_xpos = ImGui::GetContentRegionAvail().x + orig_cpos.x;
             for( size_t index = cache.text.size() - 1; index >= 1; index-- ) {
-                if( column->cells[index].current_width == 0 ) {
-                    column->calculate_cell_width( index );
-                }
+                //if( column->cells[index].current_width == 0 ) {
+                //    column->calculate_cell_width( index );
+                //}
                 current_xpos -= ( column->cells[index].current_width );
 
                 ImGui::SetCursorPos( { current_xpos, orig_cpos.y } );
@@ -1856,7 +1705,7 @@ inventory_entry &inventory_selector::draw_column( inventory_column *column )
                     ent = entry;
                 }
                 if( ImGui::IsItemHovered( ImGuiHoveredFlags_NoNavOverride ) ) {
-                    mouse_hovered_entry = &entry;
+                    //mouse_hovered_entry = &entry;
                 }
                 text_width = current_xpos - orig_cpos.x;
             }
