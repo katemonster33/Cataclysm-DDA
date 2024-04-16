@@ -2586,14 +2586,11 @@ std::pair<std::string, nc_color> inventory_selector::get_footer( navigation_mode
     }
     return std::make_pair( _( "There are no available choices" ), i_red );
 }
-inventory_selector::inventory_selector( cataimgui::window *parent, Character &u,
+inventory_selector::inventory_selector( Character &u,
                                         const inventory_selector_preset &preset )
-    : cataimgui::window( parent, ImGuiWindowFlags_AlwaysAutoResize )
-    , u( u )
+    : u( u )
     , preset( preset )
-    , multiselect( false )
     , ctxt( "INVENTORY", keyboard_mode::keychar )
-    , drag_enabled( false )
     , active_column_index( 0 )
     , mode( navigation_mode::ITEM )
     , own_inv_column( this, preset )
