@@ -473,8 +473,8 @@ void cataimgui::window::draw_colored_text( std::string const &text,
 
         }
     }
-    for(int curColorStackCount = GImGui->ColorStack.Size; curColorStackCount > startColorStackCount; curColorStackCount--)
-    {
+    for( int curColorStackCount = GImGui->ColorStack.Size; curColorStackCount > startColorStackCount;
+         curColorStackCount-- ) {
         ImGui::PopStyleColor();
     }
     ImGui::PopID();
