@@ -12,6 +12,7 @@
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_imgui.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -25,6 +26,7 @@
 #include "enum_conversions.h"
 #include "game.h"
 #include "game_inventory.h"
+#include "imgui/imgui.h"
 #include "input_context.h"
 #include "itype.h"
 #include "mutation.h"
@@ -69,6 +71,68 @@ static const std::string title_TRAITS = translate_marker( "TRAITS" );
 static const std::string title_PROFICIENCIES = translate_marker( "PROFICIENCIES" );
 
 static const unsigned int grid_width = 26;
+
+namespace
+{
+    enum class player_display_tab : int {
+        stats,
+        encumbrance,
+        speed,
+        skills,
+        traits,
+        bionics,
+        effects,
+        proficiencies,
+        num_tabs,
+    };
+} // namespace
+
+class player_disp_ui : cataimgui::window
+{
+    const Character& you;
+    void draw_stats_tab_imgui(const Character &you, bool is_current_tab);
+    void draw_profs_tab_imgui(const Character& you,
+        const unsigned line, const player_display_tab curtab, const input_context& ctxt);
+    static nc_color& get_stat_col(const int val, const int max);
+
+public:
+    player_disp_ui(const Character& you, const std::string &character_name) : cataimgui::window(character_name, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysAutoResize), you(you)
+    {
+    }
+
+    cataimgui::bounds get_bounds()
+    {
+        return { 0.f, 0.f, -1.f, -1.f };
+    }
+    void draw_controls() override;
+    void on_resized() override {}
+};
+
+nc_color& player_disp_ui::get_stat_col(const int val, const int max)
+{
+    nc_color cstatus = c_green;
+    if(val <= 0)
+    {
+        cstatus = c_dark_gray;
+    }
+    else if(val < max / 2)
+    {
+        cstatus = c_red;
+    }
+    else if(val < max)
+    {
+        cstatus = c_light_red;
+    }
+    else if(val == max)
+    {
+        cstatus = c_white;
+    }
+    else if(val < max * 1.5)
+    {
+        cstatus = c_light_green;
+    }
+    return cstatus;
+}
 
 // Rescale temperature value to one that the player sees
 static int temperature_print_rescaling( units::temperature temp )
@@ -271,21 +335,6 @@ static bool is_cqb_skill( const skill_id &id )
     return std::find( cqb_skills.begin(), cqb_skills.end(), id ) != cqb_skills.end();
 }
 
-namespace
-{
-enum class player_display_tab : int {
-    stats,
-    encumbrance,
-    speed,
-    skills,
-    traits,
-    bionics,
-    effects,
-    proficiencies,
-    num_tabs,
-};
-} // namespace
-
 static void draw_x_info( const catacurses::window &w_info, const std::string &description,
                          const unsigned info_line )
 {
@@ -374,6 +423,60 @@ static void draw_proficiencies_info( const catacurses::window &w_info, const uns
         draw_x_info( w_info, desc, info_line );
     }
     wnoutrefresh( w_info );
+}
+
+struct pdstat
+{
+    std::string desc;
+    std::string val;
+};
+
+size_t draw_stats(const std::vector<const pdstat>& stats, bool selectable)
+{
+    bool selected = false;
+    for (const pdstat& statItem : stats)
+    {
+        if (ImGui::BeginTable(statItem.desc.c_str(), 2, ImGuiTableFlags_SizingFixedFit, ImVec2(-1, 0))) {
+            ImGui::TableSetupColumn("stretch_col", ImGuiTableColumnFlags_WidthStretch);
+
+            ImGui::TableNextColumn();
+            cataimgui::draw_colored_text(statItem.desc, 0.0F, (selectable ? &selected : NULL));
+            ImGui::TableNextColumn();
+            cataimgui::draw_colored_text(statItem.val, 0.0F, (selectable ? &selected : NULL));
+            ImGui::EndTable();
+        }
+    }
+}
+
+void player_disp_ui::draw_stats_tab_imgui(const Character &you, bool is_current_tab)
+{
+    //werase(w_stats);
+    //const bool is_current_tab = curtab == player_display_tab::stats;
+    const nc_color title_col = is_current_tab ? h_light_gray : c_light_gray;
+    if(is_current_tab)
+    {
+        //ui.set_cursor(w_stats, point_zero);
+    }
+
+    // Stats
+    
+    auto print_stat_val = [](int cur, int max)
+    {
+        return colorize(string_format("%d/%d", cur, max), get_stat_col(cur, max));
+    };
+
+    std::vector<const pdstat> attributes {
+        {_("Strength:"), print_stat_val(you.get_str(), you.get_str_base())},
+        {_("Dexterity:"), print_stat_val(you.get_dex(), you.get_dex_base())},
+        {_("Intelligence:"), print_stat_val(you.get_int(), you.get_int_base())},
+        {_("Perception:"), print_stat_val(you.get_per(), you.get_per_base())},
+        {_("Weight:"), display::weight_string(you)},
+        {_("Lifestyle:"), display::health_string(you)},
+        {_("Height:"), you.height_string()},
+        {_("Age:"), you.age_string()},
+        {_("Blood type:"), io::enum_to_string(you.my_blood_type) + (you.blood_rh_factor ? "+" : "-")}
+    };
+    draw_stats(attributes, is_current_tab);
 }
 
 static void draw_stats_tab( ui_adaptor &ui, const catacurses::window &w_stats, const Character &you,
@@ -1521,6 +1624,19 @@ static std::pair<unsigned, unsigned> calculate_shared_column_win_height(
         }
     }
     return { first_win_size_y_max, second_win_size_y_max };
+}
+
+void player_disp_ui::draw_controls()
+{
+    if(ImGui::BeginTabBar("DISP_GROUPS"))
+    {
+        bool stats_open = false;
+        if(ImGui::BeginTabItem("Stats", &stats_open))
+        {
+            draw_stats_tab_imgui(you, true);
+        }
+        ImGui::EndTabBar();
+    }
 }
 
 void Character::disp_info( bool customize_character )
