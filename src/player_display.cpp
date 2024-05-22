@@ -75,7 +75,7 @@ static const unsigned int grid_width = 26;
 class player_disp_ui : cataimgui::window
 {
     void draw_stats_tab_imgui(const Character &you,
-        const unsigned line, const player_display_tab curtab, const input_context &ctxt)
+        const unsigned line, const player_display_tab curtab, const input_context &ctxt);
 public:
     player_disp_ui(const std::string &character_name) : cataimgui::window(character_name, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysAutoResize)
     {
