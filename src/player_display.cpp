@@ -12,6 +12,7 @@
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_imgui.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -25,6 +26,7 @@
 #include "enum_conversions.h"
 #include "game.h"
 #include "game_inventory.h"
+#include "imgui/imgui.h"
 #include "input_context.h"
 #include "itype.h"
 #include "mutation.h"
@@ -69,6 +71,23 @@ static const std::string title_TRAITS = translate_marker( "TRAITS" );
 static const std::string title_PROFICIENCIES = translate_marker( "PROFICIENCIES" );
 
 static const unsigned int grid_width = 26;
+
+class player_disp_ui : cataimgui::window
+{
+    void draw_stats_tab_imgui(const Character &you,
+        const unsigned line, const player_display_tab curtab, const input_context &ctxt)
+public:
+    player_disp_ui(const std::string &character_name) : cataimgui::window(character_name, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysAutoResize)
+    {
+    }
+
+    cataimgui::bounds get_bounds()
+    {
+        return { 0.f, 0.f, -1.f, -1.f };
+    }
+    void draw_controls() override;
+    void on_resized() override {}
+};
 
 // Rescale temperature value to one that the player sees
 static int temperature_print_rescaling( units::temperature temp )
@@ -374,6 +393,125 @@ static void draw_proficiencies_info( const catacurses::window &w_info, const uns
         draw_x_info( w_info, desc, info_line );
     }
     wnoutrefresh( w_info );
+}
+
+void player_disp_ui::draw_stats_tab_imgui(const Character &you,
+    const unsigned line, const player_display_tab curtab, const input_context &ctxt)
+{
+    //werase(w_stats);
+    const bool is_current_tab = curtab == player_display_tab::stats;
+    const nc_color title_col = is_current_tab ? h_light_gray : c_light_gray;
+    if(is_current_tab)
+    {
+        //ui.set_cursor(w_stats, point_zero);
+    }
+
+    //center_print(w_stats, 0, title_col,
+    //    string_format("[<color_yellow>%s</color>] %s",
+    //    ctxt.get_desc("VIEW_BODYSTAT"), _(title_STATS)));
+    //right_print(w_stats, 0, 0, title_col, string_format("[<color_yellow>%s</color>]",
+    //    ctxt.get_desc("SELECT_STATS_TAB")));
+
+    //const auto highlight_line = [is_current_tab, line](const unsigned line_to_draw)
+    //{
+    //    return is_current_tab && line == line_to_draw;
+    //};
+
+    //const auto line_color = [&highlight_line](const unsigned line_to_draw)
+    //{
+    //    if(highlight_line(line_to_draw))
+    //    {
+    //        return h_light_gray;
+    //    }
+    //    else
+    //    {
+    //        return c_light_gray;
+    //    }
+    //};
+
+    //const auto set_highlight_cursor = [&highlight_line, &ui, &w_stats]
+    //(const unsigned line_to_draw)
+    //{
+    //    if(highlight_line(line_to_draw))
+    //    {
+    //        ui.set_cursor(w_stats, point(1, line_to_draw + 1));
+    //    }
+    //};
+
+    const auto get_stat_col = [](const int val, const int max)
+    {
+        nc_color cstatus = c_green;
+        if(val <= 0)
+        {
+            cstatus = c_dark_gray;
+        }
+        else if(val < max / 2)
+        {
+            cstatus = c_red;
+        }
+        else if(val < max)
+        {
+            cstatus = c_light_red;
+        }
+        else if(val == max)
+        {
+            cstatus = c_white;
+        }
+        else if(val < max * 1.5)
+        {
+            cstatus = c_light_green;
+        }
+    };
+    // Stats
+    const auto display_stat = [&] (const char *name, const int cur, const int max, const unsigned line_to_draw)
+    {
+        bool is_selected = false;
+        //set_highlight_cursor(line_to_draw);
+        draw_colored_text(name, c_light_gray, 0.f, &is_selected);
+        mvwprintz(w_stats, point(1, line_to_draw + 1), line_color(line_to_draw), name);
+        mvwprintz(w_stats, point(18, line_to_draw + 1), cstatus, "%2d", cur);
+        mvwprintz(w_stats, point(21, line_to_draw + 1), c_light_gray, "(%2d)", max);
+    };
+    
+
+
+
+    if(ImGui::BeginTable("STATS_TABLE", 3, ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit))
+    {
+        ImGui::TableSetupColumn("COL_STAT_NAME", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("COL_VAL", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("COL_MAX", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::Text();
+        ImGui::TableNextColumn();
+
+        ImGui::EndTable();
+    }
+    display_stat(_("Strength:"), you.get_str(), you.get_str_base(), 0);
+    display_stat(_("Dexterity:"), you.get_dex(), you.get_dex_base(), 1);
+    display_stat(_("Intelligence:"), you.get_int(), you.get_int_base(), 2);
+    display_stat(_("Perception:"), you.get_per(), you.get_per_base(), 3);
+
+    mvwprintz(w_stats, point(1, 5), line_color(4), _("Weight:"));
+    right_print(w_stats, 5, 1, c_light_gray, display::weight_string(you));
+
+    mvwprintz(w_stats, point(1, 6), line_color(5), _("Lifestyle:"));
+    right_print(w_stats, 6, 1, c_light_gray, display::health_string(you));
+
+    mvwprintz(w_stats, point(1, 7), line_color(6), _("Height:"));
+    mvwprintz(w_stats, point(25 - utf8_width(you.height_string()), 7), c_light_gray,
+        you.height_string());
+
+    mvwprintz(w_stats, point(1, 8), line_color(7), _("Age:"));
+    mvwprintz(w_stats, point(25 - utf8_width(you.age_string()), 8), c_light_gray,
+        you.age_string());
+
+    mvwprintz(w_stats, point(1, 9), line_color(8), _("Blood type:"));
+    mvwprintz(w_stats, point(25 - utf8_width(io::enum_to_string(you.my_blood_type) +
+        (you.blood_rh_factor ? "+" : "-")), 9),
+        c_light_gray,
+        io::enum_to_string(you.my_blood_type) + (you.blood_rh_factor ? "+" : "-"));
+
+    wnoutrefresh(w_stats);
 }
 
 static void draw_stats_tab( ui_adaptor &ui, const catacurses::window &w_stats, const Character &you,
@@ -1529,6 +1667,19 @@ static std::pair<unsigned, unsigned> calculate_shared_column_win_height(
         }
     }
     return { first_win_size_y_max, second_win_size_y_max };
+}
+
+void player_disp_ui::draw_controls()
+{
+    if(ImGui::BeginTabBar("DISP_GROUPS"))
+    {
+        bool stats_open = false;
+        if(ImGui::BeginTabItem("Stats", &stats_open))
+        {
+            draw_stats_tab_imgui();
+        }
+        ImGui::EndTabBar();
+    }
 }
 
 void Character::disp_info( bool customize_character )
