@@ -72,6 +72,21 @@ static const std::string title_PROFICIENCIES = translate_marker( "PROFICIENCIES"
 
 static const unsigned int grid_width = 26;
 
+namespace
+{
+    enum class player_display_tab : int {
+        stats,
+        encumbrance,
+        speed,
+        skills,
+        traits,
+        bionics,
+        effects,
+        proficiencies,
+        num_tabs,
+    };
+} // namespace
+
 class player_disp_ui : cataimgui::window
 {
     void draw_stats_tab_imgui(const Character &you,
@@ -289,21 +304,6 @@ static bool is_cqb_skill( const skill_id &id )
     };
     return std::find( cqb_skills.begin(), cqb_skills.end(), id ) != cqb_skills.end();
 }
-
-namespace
-{
-enum class player_display_tab : int {
-    stats,
-    encumbrance,
-    speed,
-    skills,
-    traits,
-    bionics,
-    effects,
-    proficiencies,
-    num_tabs,
-};
-} // namespace
 
 static void draw_x_info( const catacurses::window &w_info, const std::string &description,
                          const unsigned info_line )
