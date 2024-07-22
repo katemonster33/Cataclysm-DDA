@@ -15,6 +15,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "coordinate_constants.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "debug.h"
@@ -58,6 +59,17 @@ static const proficiency_id proficiency_prof_boat_pilot( "prof_boat_pilot" );
 static const proficiency_id proficiency_prof_driver( "prof_driver" );
 
 static const skill_id skill_driving( "driving" );
+
+static const ter_str_id ter_t_railroad_track( "t_railroad_track" );
+static const ter_str_id ter_t_railroad_track_d( "t_railroad_track_d" );
+static const ter_str_id ter_t_railroad_track_d1( "t_railroad_track_d1" );
+static const ter_str_id ter_t_railroad_track_d2( "t_railroad_track_d2" );
+static const ter_str_id ter_t_railroad_track_d_on_tie( "t_railroad_track_d_on_tie" );
+static const ter_str_id ter_t_railroad_track_h( "t_railroad_track_h" );
+static const ter_str_id ter_t_railroad_track_h_on_tie( "t_railroad_track_h_on_tie" );
+static const ter_str_id ter_t_railroad_track_on_tie( "t_railroad_track_on_tie" );
+static const ter_str_id ter_t_railroad_track_v( "t_railroad_track_v" );
+static const ter_str_id ter_t_railroad_track_v_on_tie( "t_railroad_track_v_on_tie" );
 
 static const trait_id trait_DEFT( "DEFT" );
 static const trait_id trait_PROF_SKATER( "PROF_SKATER" );
@@ -875,7 +887,7 @@ veh_collision vehicle::part_collision( int part, const tripoint &p,
             return ret;
         }
         // we just ran into a fish, so move it out of the way
-        if( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, critter->pos() ) ) {
+        if( here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, critter->pos_bub() ) ) {
             tripoint end_pos = critter->pos();
             tripoint start_pos;
             const units::angle angle =
@@ -1434,7 +1446,7 @@ void vehicle::pldrive( Character &driver, const point &p, int z )
         // - 50% Skill at Per/Dex 12: 1-in-18 chance
     }
     if( z != 0 && is_rotorcraft() ) {
-        driver.moves = std::min( driver.moves, 0 );
+        driver.set_moves( std::min( driver.get_moves(), 0 ) );
         thrust( 0, z );
     }
     units::angle turn_delta = vehicles::steer_increment * p.x;
@@ -1460,7 +1472,7 @@ void vehicle::pldrive( Character &driver, const point &p, int z )
 
         // If you've got more moves than speed, it's most likely time stop
         // Let's get rid of that
-        driver.moves = std::min( driver.moves, driver.get_speed() );
+        driver.set_moves( std::min( driver.get_moves(), driver.get_speed() ) );
 
         ///\EFFECT_DEX reduces chance of losing control of vehicle when turning
 
@@ -1500,7 +1512,7 @@ void vehicle::pldrive( Character &driver, const point &p, int z )
                 fumble_time = 2;
             }
             turn_delta *= fumble_factor;
-            cost = std::max( cost, driver.moves + fumble_time * 100 );
+            cost = std::max( cost, driver.get_moves() + fumble_time * 100 );
         } else if( one_in( 10 ) ) {
             // Don't warn all the time or it gets spammy
             if( cost >= driver.get_speed() * 2 ) {
@@ -1513,7 +1525,7 @@ void vehicle::pldrive( Character &driver, const point &p, int z )
         turn( turn_delta );
 
         // At most 3 turns per turn, because otherwise it looks really weird and jumpy
-        driver.moves -= std::max( cost, driver.get_speed() / 3 + 1 );
+        driver.mod_moves( -std::max( cost, driver.get_speed() / 3 + 1 ) );
     }
 
     if( p.y != 0 ) {
@@ -1676,17 +1688,16 @@ void vehicle::precalculate_vehicle_turning( units::angle new_turn_dir, bool chec
 
             // special case for rails
             if( check_rail_direction ) {
-                ter_id terrain_at_wheel = here.ter( wheel_tripoint );
+                const ter_str_id &terrain_at_wheel = here.ter( wheel_tripoint ).id();
                 // check is it correct tile to turn into
-                if( !is_diagonal_movement &&
-                    ( terrain_at_wheel == t_railroad_track_d || terrain_at_wheel == t_railroad_track_d1 ||
-                      terrain_at_wheel == t_railroad_track_d2 || terrain_at_wheel == t_railroad_track_d_on_tie ) ) {
+                if( !is_diagonal_movement ) {
+                    const std::unordered_set<ter_str_id> diagonal_track_ters = { ter_t_railroad_track_d, ter_t_railroad_track_d1, ter_t_railroad_track_d2, ter_t_railroad_track_d_on_tie };
+                    if( diagonal_track_ters.find( terrain_at_wheel ) != diagonal_track_ters.end() ) {
+                        incorrect_tiles_not_diagonal++;
+                    }
+                } else if( const std::unordered_set<ter_str_id> straight_track_ters = { ter_t_railroad_track, ter_t_railroad_track_on_tie, ter_t_railroad_track_h, ter_t_railroad_track_v, ter_t_railroad_track_h_on_tie, ter_t_railroad_track_v_on_tie };
+                           straight_track_ters.find( terrain_at_wheel ) != straight_track_ters.end() ) {
                     incorrect_tiles_not_diagonal++;
-                } else if( is_diagonal_movement &&
-                           ( terrain_at_wheel == t_railroad_track || terrain_at_wheel == t_railroad_track_on_tie ||
-                             terrain_at_wheel == t_railroad_track_h || terrain_at_wheel == t_railroad_track_v ||
-                             terrain_at_wheel == t_railroad_track_h_on_tie || terrain_at_wheel == t_railroad_track_v_on_tie ) ) {
-                    incorrect_tiles_diagonal++;
                 }
                 if( incorrect_tiles_diagonal > allowed_incorrect_tiles_diagonal ||
                     incorrect_tiles_not_diagonal > allowed_incorrect_tiles_not_diagonal ) {
@@ -1997,8 +2008,10 @@ bool vehicle::level_vehicle()
                                      !here.supports_above( part_pos + tripoint_below );
         }
         if( !is_on_ramp &&
-            ( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, tripoint( part_pos.xy(), part_pos.z - 1 ) ) ||
-              here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, tripoint( part_pos.xy(), part_pos.z + 1 ) ) ) ) {
+            ( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, tripoint_bub_ms( part_pos.x, part_pos.y,
+                             part_pos.z - 1 ) ) ||
+              here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, tripoint_bub_ms( part_pos.x, part_pos.y,
+                             part_pos.z + 1 ) ) ) ) {
             is_on_ramp = true;
         }
     }
@@ -2022,7 +2035,7 @@ bool vehicle::level_vehicle()
         }
     }
     if( adjust_level ) {
-        here.displace_vehicle( *this, tripoint_below, center_drop, dropped_parts );
+        here.displace_vehicle( *this, tripoint_rel_ms_below, center_drop, dropped_parts );
         return false;
     } else {
         return true;

@@ -60,11 +60,19 @@
 struct tripoint;
 template <typename T> struct enum_traits;
 
+static const ammo_effect_str_id ammo_effect_COOKOFF( "COOKOFF" );
+static const ammo_effect_str_id ammo_effect_INCENDIARY( "INCENDIARY" );
+static const ammo_effect_str_id ammo_effect_SPECIAL_COOKOFF( "SPECIAL_COOKOFF" );
+
 static const ammotype ammo_NULL( "NULL" );
+
+static const crafting_category_id crafting_category_CC_FOOD( "CC_FOOD" );
 
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_bullet( "bullet" );
 
+static const flag_id json_flag_NO_RELOAD( "NO_RELOAD" );
+static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
 
 static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
 static const gun_mode_id gun_mode_MELEE( "MELEE" );
@@ -402,16 +410,9 @@ void Item_factory::finalize_pre( itype &obj )
         if( mats.find( material_hydrocarbons ) == mats.end() &&
             mats.find( material_oil ) == mats.end() ) {
             const auto &ammo_effects = obj.ammo->ammo_effects;
-            obj.ammo->cookoff = ammo_effects.count( "INCENDIARY" ) > 0 ||
-                                ammo_effects.count( "COOKOFF" ) > 0;
-            static const std::set<std::string> special_cookoff_tags = {{
-                    "SPECIAL_COOKOFF"
-                }
-            };
-            obj.ammo->special_cookoff = std::any_of( ammo_effects.begin(), ammo_effects.end(),
-            []( const std::string & s ) {
-                return special_cookoff_tags.count( s ) > 0;
-            } );
+            obj.ammo->cookoff = ammo_effects.count( ammo_effect_INCENDIARY ) > 0 ||
+                                ammo_effects.count( ammo_effect_COOKOFF ) > 0;
+            obj.ammo->special_cookoff = ammo_effects.count( ammo_effect_SPECIAL_COOKOFF ) > 0;
         } else {
             obj.ammo->cookoff = false;
             obj.ammo->special_cookoff = false;
@@ -779,13 +780,25 @@ void Item_factory::finalize_post( itype &obj )
         }
     }
 
+    if( obj.has_flag( json_flag_NO_UNLOAD ) ) {
+        for( pocket_data &pocket : obj.pockets ) {
+            pocket._no_unload = true;
+        }
+    }
+
+    if( obj.has_flag( json_flag_NO_RELOAD ) ) {
+        for( pocket_data &pocket : obj.pockets ) {
+            pocket._no_reload = true;
+        }
+    }
+
     // go through each pocket and assign the name as a fallback definition
     for( pocket_data &pocket : obj.pockets ) {
         pocket.name = obj.name;
     }
 
     if( obj.comestible ) {
-        for( const std::pair<const diseasetype_id, int> &elem : obj.comestible->contamination ) {
+        for( const std::pair<const diseasetype_id, float> &elem : obj.comestible->contamination ) {
             const diseasetype_id dtype = elem.first;
             if( !dtype.is_valid() ) {
                 debugmsg( "contamination in %s contains invalid diseasetype_id %s.",
@@ -872,7 +885,11 @@ void Item_factory::finalize_post_armor( itype &obj )
         if( data.max_encumber == -1 ) {
             units::volume total_nonrigid_volume = 0_ml;
             for( const pocket_data &pocket : obj.pockets ) {
-                if( !pocket.rigid ) {
+                // Reimplementation of item_pocket::is_standard_type()
+                bool pocket_is_standard = pocket.type == pocket_type::CONTAINER ||
+                                          pocket.type == pocket_type::MAGAZINE ||
+                                          pocket.type == pocket_type::MAGAZINE_WELL;
+                if( !pocket.rigid && pocket_is_standard ) {
                     // include the modifier for each individual pocket
                     total_nonrigid_volume += pocket.max_contains_volume() * pocket.volume_encumber_modifier;
                 }
@@ -1639,7 +1656,7 @@ class iuse_function_wrapper : public iuse_actor
             return std::make_unique<iuse_function_wrapper>( *this );
         }
 
-        void load( const JsonObject & ) override {}
+        void load( const JsonObject &, const std::string & ) override {}
 };
 
 class iuse_function_wrapper_with_info : public iuse_function_wrapper
@@ -1778,7 +1795,6 @@ void Item_factory::init()
     add_iuse( "GUNMOD_ATTACH", &iuse::gunmod_attach );
     add_iuse( "TOOLMOD_ATTACH", &iuse::toolmod_attach );
     add_iuse( "HACKSAW", &iuse::hacksaw );
-    add_iuse( "HAMMER", &iuse::hammer );
     add_iuse( "HEATPACK", &iuse::heatpack );
     add_iuse( "HEAT_FOOD", &iuse::heat_food );
     add_iuse( "HONEYCOMB", &iuse::honeycomb );
@@ -1791,6 +1807,7 @@ void Item_factory::init()
     add_iuse( "MACE", &iuse::mace );
     add_iuse( "MAGIC_8_BALL", &iuse::magic_8_ball );
     add_iuse( "MEASURE_RESONANCE", &iuse::measure_resonance );
+    add_iuse( "CHANGE_OUTFIT", &iuse::change_outfit );
     add_iuse( "PLAY_GAME", &iuse::play_game );
     add_iuse( "MAKEMOUND", &iuse::makemound );
     add_iuse( "DIG_CHANNEL", &iuse::dig_channel );
@@ -1838,8 +1855,6 @@ void Item_factory::init()
     add_iuse( "REMOTEVEH", &iuse::remoteveh );
     add_iuse( "REMOTEVEH_TICK", &iuse::remoteveh_tick );
     add_iuse( "REMOVE_ALL_MODS", &iuse::remove_all_mods );
-    add_iuse( "RM13ARMOR_OFF", &iuse::rm13armor_off );
-    add_iuse( "RM13ARMOR_ON", &iuse::rm13armor_on );
     add_iuse( "ROBOTCONTROL", &iuse::robotcontrol );
     add_iuse( "SEED", &iuse::seed );
     add_iuse( "SEWAGE", &iuse::sewage );
@@ -1867,6 +1882,9 @@ void Item_factory::init()
     add_iuse( "WASH_SOFT_ITEMS", &iuse::wash_soft_items );
     add_iuse( "WASH_HARD_ITEMS", &iuse::wash_hard_items );
     add_iuse( "WASH_ALL_ITEMS", &iuse::wash_all_items );
+    add_iuse( "HEAT_LIQUID_ITEMS", &iuse::heat_liquid_items );
+    add_iuse( "HEAT_SOLID_ITEMS", &iuse::heat_solid_items );
+    add_iuse( "HEAT_ALL_ITEMS", &iuse::heat_all_items );
     add_iuse( "WATER_PURIFIER", &iuse::water_purifier );
     add_iuse( "WEAK_ANTIBIOTIC", &iuse::weak_antibiotic );
     add_iuse( "WEATHER_TOOL", &iuse::weather_tool );
@@ -2222,6 +2240,21 @@ void Item_factory::check_definitions() const
             }
 
             for( const std::pair<const itype_id, int> &b : type->brewable->results ) {
+                if( !has_template( b.first ) ) {
+                    msg += string_format( "invalid result id %s\n", b.first.c_str() );
+                }
+            }
+        }
+        if( type->compostable ) {
+            if( type->compostable->time < 1_turns ) {
+                msg += "fermenting time is less than 1 turn\n";
+            }
+
+            if( type->compostable->results.empty() ) {
+                msg += "empty product list\n";
+            }
+
+            for( const std::pair<const itype_id, int> &b : type->compostable->results ) {
                 if( !has_template( b.first ) ) {
                     msg += string_format( "invalid result id %s\n", b.first.c_str() );
                 }
@@ -2635,7 +2668,7 @@ static void load_memory_card_data( memory_card_info &mcd, const JsonObject &jo )
             mcd.recipes_categories.emplace( cat );
         }
     } else {
-        mcd.recipes_categories = { "CC_FOOD" };
+        mcd.recipes_categories = { crafting_category_CC_FOOD };
     }
     if( jo.has_member( "secret_recipes" ) ) {
         mcd.secret_recipes = jo.get_bool( "secret_recipes" );
@@ -2652,6 +2685,7 @@ void islot_ammo::load( const JsonObject &jo )
     assign( jo, "drop_chance", drop_chance, strict, 0.0f, 1.0f );
     optional( jo, was_loaded, "drop_active", drop_active, true );
     optional( jo, was_loaded, "projectile_count", count, 1 );
+    optional( jo, was_loaded, "multi_projectile_effects", multi_projectile_effects, false );
     optional( jo, was_loaded, "shot_spread", shot_spread, 0 );
     assign( jo, "shot_damage", shot_damage, strict );
     // Damage instance assign reader handles pierce and prop_damage
@@ -2661,6 +2695,7 @@ void islot_ammo::load( const JsonObject &jo )
     assign( jo, "dispersion", dispersion, strict, 0 );
     optional( jo, was_loaded, "dispersion_modifier", disp_mod_by_barrels, {} );
     assign( jo, "recoil", recoil, strict, 0 );
+    optional( jo, was_loaded, "recovery_chance", recovery_chance, 0 );
     assign( jo, "count", def_charges, strict, 1 );
     assign( jo, "loudness", loudness, strict, 0 );
     assign( jo, "effects", ammo_effects, strict );
@@ -3058,8 +3093,6 @@ void islot_armor::load( const JsonObject &jo )
     optional( jo, was_loaded, "warmth", warmth, 0 );
     optional( jo, was_loaded, "non_functional", non_functional, itype_id() );
     optional( jo, was_loaded, "damage_verb", damage_verb );
-    optional( jo, was_loaded, "weight_capacity_modifier", weight_capacity_modifier, 1.0 );
-    optional( jo, was_loaded, "weight_capacity_bonus", weight_capacity_bonus, mass_reader{}, 0_gram );
     optional( jo, was_loaded, "power_armor", power_armor, false );
     optional( jo, was_loaded, "valid_mods", valid_mods );
 }
@@ -3263,7 +3296,7 @@ void Item_factory::load( islot_comestible &slot, const JsonObject &jo, const std
     assign( jo, "quench", slot.quench, strict );
     assign( jo, "fun", slot.fun, strict );
     assign( jo, "stim", slot.stim, strict );
-    assign( jo, "fatigue_mod", slot.fatigue_mod, strict );
+    assign( jo, "sleepiness_mod", slot.sleepiness_mod, strict );
     assign( jo, "healthy", slot.healthy, strict );
     assign( jo, "parasites", slot.parasites, strict, 0 );
     assign( jo, "freezing_point", slot.freeze_point, strict );
@@ -3274,7 +3307,7 @@ void Item_factory::load( islot_comestible &slot, const JsonObject &jo, const std
 
     for( const JsonObject jsobj : jo.get_array( "contamination" ) ) {
         slot.contamination.emplace( diseasetype_id( jsobj.get_string( "disease" ) ),
-                                    jsobj.get_int( "probability" ) );
+                                    jsobj.get_float( "probability" ) );
     }
 
     if( jo.has_member( "primary_material" ) ) {
@@ -3400,6 +3433,23 @@ void islot_brewable::load( const JsonObject &jo )
 }
 
 void islot_brewable::deserialize( const JsonObject &jo )
+{
+    load( jo );
+}
+
+void islot_compostable::load( const JsonObject &jo )
+{
+    optional( jo, was_loaded, "time", time, 1_turns );
+    if( jo.has_array( "results" ) ) {
+        for( std::string entry : jo.get_string_array( "results" ) ) {
+            results[itype_id( entry )] = 1;
+        }
+    } else {
+        mandatory( jo, was_loaded, "results", results );
+    }
+}
+
+void islot_compostable::deserialize( const JsonObject &jo )
 {
     load( jo );
 }
@@ -3599,11 +3649,9 @@ void Item_factory::load_generic( const JsonObject &jo, const std::string &src )
 // Set for all items (not just food and clothing) to avoid edge cases
 void Item_factory::set_allergy_flags( itype &item_template )
 {
-    static const std::array<std::pair<material_id, flag_id>, 31> all_pairs = { {
+    static const std::array<std::pair<material_id, flag_id>, 29> all_pairs = { {
             // First allergens:
             // An item is an allergen even if it has trace amounts of allergenic material
-            { material_hflesh, flag_CANNIBALISM },
-            { material_hblood, flag_CANNIBALISM },
             { material_hflesh, flag_ALLERGEN_MEAT },
             { material_iflesh, flag_ALLERGEN_MEAT },
             { material_bread, flag_ALLERGEN_BREAD },
@@ -3648,6 +3696,7 @@ void Item_factory::set_allergy_flags( itype &item_template )
 
 // Migration helper: turns human flesh into generic flesh
 // Don't call before making sure that the cannibalism flag is set
+// Cannibalism is vitamin based now but how old is this? Is it still useful?
 void hflesh_to_flesh( itype &item_template )
 {
     auto &mats = item_template.materials;
@@ -4142,12 +4191,13 @@ void Item_factory::load_basic_info( const JsonObject &jo, itype &def, const std:
             def.melee_relative = load_damage_map( jrel.get_object( "melee_damage" ) );
         }
     }
+    def.using_legacy_to_hit = false; // Reset to false so inherited legacy to_hit s aren't flagged
     if( jo.has_int( "to_hit" ) ) {
         assign( jo, "to_hit", def.m_to_hit, strict );
+        def.using_legacy_to_hit = true;
     } else if( jo.has_object( "to_hit" ) ) {
         io::acc_data temp;
-        bool was_loaded = false;
-        mandatory( jo, was_loaded, "to_hit", temp );
+        mandatory( jo, false, "to_hit", temp );
         def.m_to_hit = temp.sum_values();
     }
     optional( jo, false, "variant_type", def.variant_kind, itype_variant_kind::generic );
@@ -4348,8 +4398,8 @@ void Item_factory::load_basic_info( const JsonObject &jo, itype &def, const std:
         }
     }
 
-    set_use_methods_from_json( jo, "use_action", def.use_methods, def.ammo_scale );
-    set_use_methods_from_json( jo, "tick_action", def.tick_action, def.ammo_scale );
+    set_use_methods_from_json( jo, src, "use_action", def.use_methods, def.ammo_scale );
+    set_use_methods_from_json( jo, src, "tick_action", def.tick_action, def.ammo_scale );
 
     assign( jo, "countdown_interval", def.countdown_interval );
     assign( jo, "revert_to", def.revert_to, strict );
@@ -4359,7 +4409,7 @@ void Item_factory::load_basic_info( const JsonObject &jo, itype &def, const std:
 
     } else if( jo.has_object( "countdown_action" ) ) {
         JsonObject tmp = jo.get_object( "countdown_action" );
-        use_function fun = usage_from_object( tmp ).second;
+        use_function fun = usage_from_object( tmp, src ).second;
         if( fun ) {
             def.countdown_action = fun;
         }
@@ -4370,7 +4420,7 @@ void Item_factory::load_basic_info( const JsonObject &jo, itype &def, const std:
 
     } else if( jo.has_object( "drop_action" ) ) {
         JsonObject tmp = jo.get_object( "drop_action" );
-        use_function fun = usage_from_object( tmp ).second;
+        use_function fun = usage_from_object( tmp, src ).second;
         if( fun ) {
             def.drop_action = fun;
         }
@@ -4401,6 +4451,7 @@ void Item_factory::load_basic_info( const JsonObject &jo, itype &def, const std:
     assign( jo, "ammo_data", def.ammo, src == "dda" );
     assign( jo, "seed_data", def.seed, src == "dda" );
     assign( jo, "brewable", def.brewable, src == "dda" );
+    assign( jo, "compostable", def.compostable, src == "dda" );
     load_slot_optional( def.relic_data, jo, "relic_data", src );
     assign( jo, "milling", def.milling_data, src == "dda" );
 
@@ -4423,10 +4474,7 @@ void Item_factory::load_basic_info( const JsonObject &jo, itype &def, const std:
     check_and_create_magazine_pockets( def );
     add_special_pockets( def );
 
-    if( !def.src.empty() && def.src.back().first != def.id ) {
-        def.src.clear();
-    }
-    def.src.emplace_back( def.id, mod_id( src ) );
+    mod_tracker::assign_src( def, src );
 
     if( def.magazines.empty() ) {
         migrate_mag_from_pockets( def );
@@ -4447,7 +4495,7 @@ void Item_factory::load_basic_info( const JsonObject &jo, itype &def, const std:
         // auto-create a category that is unlikely to already be used and put the
         // snippets in it.
         def.snippet_category = "auto:" + def.id.str();
-        SNIPPET.add_snippets_from_json( def.snippet_category, jo.get_array( "snippet_category" ) );
+        SNIPPET.add_snippets_from_json( def.snippet_category, jo.get_array( "snippet_category" ), src );
     } else {
         def.snippet_category = jo.get_string( "snippet_category", "" );
     }
@@ -4554,35 +4602,8 @@ itype_id Item_factory::migrate_id( const itype_id &id )
     return parent != nullptr ? parent->replace : id;
 }
 
-void Item_factory::migrate_item( const itype_id &id, item &obj )
+static void apply_migration( const migration *migrant, item &obj )
 {
-    auto iter = migrations.find( id );
-    if( iter == migrations.end() ) {
-        return;
-    }
-    bool convert = false;
-    const migration *migrant = nullptr;
-    for( const migration &m : iter->second ) {
-        if( m.from_variant && obj.has_itype_variant() && obj.itype_variant().id == *m.from_variant ) {
-            migrant = &m;
-            // This is not the variant that the item has already been convert to
-            // So we'll convert it again.
-            convert = true;
-            break;
-        }
-        // When we find a migration that doesn't care about variants, keep it around
-        if( !m.from_variant ) {
-            migrant = &m;
-        }
-    }
-    if( migrant == nullptr ) {
-        return;
-    }
-
-    if( convert ) {
-        obj.convert( migrant->replace );
-    }
-
     if( migrant->reset_item_vars ) {
         obj.clear_vars();
         for( const auto &pair : migrant->replace.obj().item_variables ) {
@@ -4617,6 +4638,54 @@ void Item_factory::migrate_item( const itype_id &id, item &obj )
 
     if( !migrant->contents.empty() && migrant->sealed ) {
         obj.seal();
+    }
+}
+
+void Item_factory::migrate_item( const itype_id &id, item &obj )
+{
+    auto iter = migrations.find( id );
+    if( iter == migrations.end() ) {
+        return;
+    }
+    bool convert = false;
+    const migration *migrant = nullptr;
+    for( const migration &m : iter->second ) {
+        if( m.from_variant && obj.has_itype_variant() && obj.itype_variant().id == *m.from_variant ) {
+            migrant = &m;
+            // This is not the variant that the item has already been convert to
+            // So we'll convert it again.
+            convert = true;
+            break;
+        }
+        // When we find a migration that doesn't care about variants, keep it around
+        if( !m.from_variant ) {
+            migrant = &m;
+        }
+    }
+    if( migrant == nullptr ) {
+        return;
+    }
+
+    if( convert ) {
+        obj.convert( migrant->replace );
+    }
+
+    apply_migration( migrant, obj );
+}
+
+void Item_factory::migrate_item_from_variant( item &obj, const std::string &from_variant )
+{
+    auto iter = migrations.find( obj.typeId() );
+    if( iter == migrations.end() ) {
+        return;
+    }
+    for( const migration &m : iter->second ) {
+        if( !m.from_variant.has_value() || m.from_variant.value() != from_variant ) {
+            continue;
+        }
+        obj.convert( m.replace );
+        apply_migration( &m, obj );
+        break;
     }
 }
 
@@ -4741,6 +4810,10 @@ void Item_factory::clear()
     migrated_magazines.clear();
     migrations.clear();
 
+    /* Avoid unvisited member errors when iterating on json */
+    for( std::pair<JsonObject, std::string> &deferred_json : deferred ) {
+        deferred_json.first.allow_omitted_members();
+    }
     deferred.clear();
 
     frozen = false;
@@ -4947,6 +5020,15 @@ void Item_factory::add_entry( Item_group &ig, const JsonObject &obj, const std::
     } else {
         use_modifier |= load_sub_ref( modifier.container, obj, "container", ig );
     }
+    if( obj.has_array( "components" ) ) {
+        JsonArray ja = obj.get_array( "components" );
+        std::vector<itype_id> made_of;
+        for( JsonValue sub : ja ) {
+            itype_id component = itype_id( sub );
+            made_of.emplace_back( component );
+        }
+        sptr->components_items = made_of;
+    }
     use_modifier |= load_sub_ref( modifier.contents, obj, "contents", ig );
     use_modifier |= load_str_arr( modifier.snippets, obj, "snippets" );
     if( obj.has_member( "sealed" ) ) {
@@ -5110,8 +5192,9 @@ void Item_factory::load_item_group_data( const JsonObject &jsobj, Item_group *ig
     }
 }
 
-void Item_factory::set_use_methods_from_json( const JsonObject &jo, const std::string &member,
-        std::map<std::string, use_function> &use_methods, std::map<std::string, int> &ammo_scale )
+void Item_factory::set_use_methods_from_json( const JsonObject &jo, const std::string &src,
+        const std::string &member, std::map<std::string, use_function> &use_methods,
+        std::map<std::string, int> &ammo_scale )
 {
     if( !jo.has_member( member ) ) {
         return;
@@ -5126,7 +5209,7 @@ void Item_factory::set_use_methods_from_json( const JsonObject &jo, const std::s
                 emplace_usage( use_methods, type );
             } else if( entry.test_object() ) {
                 JsonObject obj = entry.get_object();
-                std::pair<std::string, use_function> fun = usage_from_object( obj );
+                std::pair<std::string, use_function> fun = usage_from_object( obj, src );
                 if( fun.second ) {
                     use_methods.insert( fun );
                     if( obj.has_int( "ammo_scale" ) ) {
@@ -5150,7 +5233,7 @@ void Item_factory::set_use_methods_from_json( const JsonObject &jo, const std::s
             emplace_usage( use_methods, type );
         } else if( jo.has_object( member ) ) {
             JsonObject obj = jo.get_object( member );
-            std::pair<std::string, use_function> fun = usage_from_object( obj );
+            std::pair<std::string, use_function> fun = usage_from_object( obj, src );
             if( fun.second ) {
                 use_methods.insert( fun );
                 if( obj.has_int( "ammo_scale" ) ) {
@@ -5174,7 +5257,8 @@ void Item_factory::emplace_usage( std::map<std::string, use_function> &container
     }
 }
 
-std::pair<std::string, use_function> Item_factory::usage_from_object( const JsonObject &obj )
+std::pair<std::string, use_function> Item_factory::usage_from_object( const JsonObject &obj,
+        const std::string &src )
 {
     std::string type = obj.get_string( "type" );
 
@@ -5192,7 +5276,7 @@ std::pair<std::string, use_function> Item_factory::usage_from_object( const Json
         return std::make_pair( type, use_function() );
     }
 
-    method.get_actor_ptr()->load( obj );
+    method.get_actor_ptr()->load( obj, src );
     return std::make_pair( type, method );
 }
 

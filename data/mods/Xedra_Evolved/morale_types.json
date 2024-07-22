@@ -5,6 +5,11 @@
     "text": "Ate dreamdross"
   },
   {
+    "id": "morale_drank_blood",
+    "type": "morale_type",
+    "text": "Drank human blood"
+  },
+  {
     "id": "morale_craving_lotus_blossom",
     "type": "morale_type",
     "text": "A hum at the edge of your thoughts."
@@ -18,5 +23,10 @@
     "id": "morale_broke_fae_ban",
     "type": "morale_type",
     "text": "Broke one of the ancient laws of the fae"
+  },
+  {
+    "id": "morale_homullus_self_deception",
+    "type": "morale_type",
+    "text": "Focusing on the positive"
   }
 ]
