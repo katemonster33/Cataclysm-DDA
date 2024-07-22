@@ -130,7 +130,7 @@ void ImTui_ImplNcurses_Init( float fps_active, float fps_idle )
     ImGui::GetIO().KeyMap[ImGuiKey_Space]       = 32;
     ImGui::GetIO().KeyMap[ImGuiKey_Enter]       = 10;
     ImGui::GetIO().KeyMap[ImGuiKey_Escape]      = 27;
-    ImGui::GetIO().KeyMap[ImGuiKey_KeyPadEnter] = 343;
+    ImGui::GetIO().KeyMap[ImGuiKey_KeypadEnter] = 343;
     ImGui::GetIO().KeyMap[ImGuiKey_A]           = 1;
     ImGui::GetIO().KeyMap[ImGuiKey_C]           = 3;
     ImGui::GetIO().KeyMap[ImGuiKey_V]           = 22;
