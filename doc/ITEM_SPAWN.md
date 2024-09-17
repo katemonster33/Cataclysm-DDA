@@ -89,6 +89,7 @@ Each entry can have more values (shown above as `...`).  They allow further prop
 "charges": <number>|<array>,
 "charges-min": <number>,
 "charges-max": <number>,
+"components": "<array>",
 "contents-item": "<item-id>" (can be a string or an array of strings),
 "contents-group": "<group-id>" (can be a string or an array of strings),
 "ammo-item": "<ammo-item-id>",
@@ -96,6 +97,7 @@ Each entry can have more values (shown above as `...`).  They allow further prop
 "container-group": "<group-id>",
 "entry-wrapper": "<item-id>",
 "sealed": <boolean>
+"active": <boolean>
 "custom-flags": <array of string>,
 "variant": <string>
 "artifact": <object>
@@ -111,9 +113,13 @@ Each entry can have more values (shown above as `...`).  They allow further prop
 
 `sealed`: If true, a container will be sealed when the item spawns.  Default is `true`.
 
+`active`: If true, item would be spawned activated.  Be sure to use active versions of item, like `flashlight_on` instead of `flashlight`.  Default is `false`
+
 `custom-flags`: An array of flags that will be applied to this item.
 
 `variant`: A valid itype variant id for this item.
+
+`components`: Valid itype ids which are put into the item as its components, as may be done with in-game crafting. Note that there is no requirement for a matching recipe to exist, the components may be any existent item. You could define a spawned `hamburger` to have components of `[ "rock", "rock" ]` but it won't be good food... rocks contain no calories or nutrients!
 
 `event`: A reference to a holiday in the `holiday` enum. If specified, the entry only spawns during the specified real holiday. This works the same way as the seasonal title screens, where the holiday is checked against the current system's time. If the holiday matches, the item's spawn probability is taken from the `prob` field. Otherwise, the spawn probability becomes 0.
 
@@ -252,7 +258,7 @@ Mods can add entries to item groups by specifying a group with the same id that 
 
 In some places one can define an item group directly instead of giving the id of a group.  One cannot refer to that group elsewhere - it has no visible id (it has an unspecific/random id internally).  This is most useful when the group is very specific to the place it is used and won't ever appear anywhere else.
 
-As an example: monster death drops (`death_drops` entry in the `MONSTER` object, see [JSON_INFO.md](https://github.com/CleverRaven/Cataclysm-DDA/blob/master/doc/JSON_INFO.md)) can do this.  If the monster is very specific (e.g. a special robot, a unique endgame monster), the item spawned upon its death won't (in that form) appear in any other group.
+As an example: monster death drops (`death_drops` entry in the `MONSTER` object, see [MONSTERS.md](https://github.com/CleverRaven/Cataclysm-DDA/blob/master/doc/MONSTERS.md) can do this.  If the monster is very specific (e.g. a special robot, a unique endgame monster), the item spawned upon its death won't (in that form) appear in any other group.
 
 Therefore, this snippet:
 

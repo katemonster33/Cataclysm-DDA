@@ -76,7 +76,9 @@
       { "monster": "mon_feral_druid", "weight": 50, "cost_multiplier": 2 },
       { "monster": "mon_feral_druid_enhanced", "weight": 5, "cost_multiplier": 4 },
       { "monster": "mon_feral_earthshaper", "weight": 50, "cost_multiplier": 2 },
-      { "monster": "mon_feral_earthshaper_enhanced", "weight": 5, "cost_multiplier": 4 }
+      { "monster": "mon_feral_earthshaper_enhanced", "weight": 5, "cost_multiplier": 4 },
+      { "monster": "mon_feral_magus", "weight": 50, "cost_multiplier": 2 },
+      { "monster": "mon_feral_magus_enhanced", "weight": 5, "cost_multiplier": 4 }
     ]
   },
   {
@@ -126,6 +128,16 @@
   },
   {
     "type": "monstergroup",
+    "name": "DUMP_ANIMALS",
+    "monsters": [ { "monster": "mon_otyugh", "weight": 5 } ]
+  },
+  {
+    "type": "monstergroup",
+    "name": "GROUP_SEWER",
+    "monsters": [ { "monster": "mon_otyugh", "weight": 15 } ]
+  },
+  {
+    "type": "monstergroup",
     "name": "GROUP_LAB",
     "monsters": [ { "monster": "mon_feral_lab_magician", "weight": 25, "cost_multiplier": 5 } ]
   },
@@ -169,7 +181,12 @@
     "type": "monstergroup",
     "name": "GROUP_WORM",
     "is_animal": true,
-    "monsters": [ { "monster": "mon_worm", "weight": 995 }, { "monster": "mon_bulette", "weight": 5, "cost_multiplier": 40 } ]
+    "monsters": [
+      { "monster": "mon_worm_small", "weight": 500 },
+      { "monster": "mon_worm", "weight": 445 },
+      { "monster": "mon_ankheg", "weight": 50, "cost_multiplier": 6 },
+      { "monster": "mon_bulette", "weight": 5, "cost_multiplier": 40 }
+    ]
   },
   {
     "type": "monstergroup",

@@ -63,6 +63,11 @@ int talker_monster_const::pain_cur() const
     return me_mon_const->get_pain();
 }
 
+int talker_monster_const::perceived_pain_cur() const
+{
+    return me_mon_const->get_perceived_pain();
+}
+
 bool talker_monster_const::has_effect( const efftype_id &effect_id, const bodypart_id &bp ) const
 {
     return me_mon_const->has_effect( effect_id, bp );
@@ -161,6 +166,11 @@ void talker_monster::set_morale( int new_val )
 int talker_monster_const::get_friendly() const
 {
     return me_mon_const->friendly;
+}
+
+int talker_monster_const::get_difficulty() const
+{
+    return me_mon_const->type->difficulty;
 }
 
 int talker_monster_const::get_size() const

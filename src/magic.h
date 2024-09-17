@@ -59,7 +59,6 @@ enum class spell_flag : int {
     FRIENDLY_POLY, // polymorph spell makes the monster friendly
     SILENT, // spell makes no noise at target
     NO_EXPLOSION_SFX, // spell has no visual explosion
-    LIQUID, // effects applied by this spell can be resisted with waterproof equipment if targeting a body part. doesn't apply to damage (yet)
     LOUD, // spell makes extra noise at target
     VERBAL, // spell makes noise at caster location, mouth encumbrance affects fail %
     SOMATIC, // arm encumbrance affects fail % and casting time (slightly)
@@ -86,8 +85,14 @@ enum class spell_flag : int {
     NON_MAGICAL, // ignores spell resistance
     PSIONIC, // psychic powers instead of traditional magic
     RECHARM, // charm_monster spell adds to duration of existing charm_monster effect
-    DODGEABLE, // the target can dodge this attack completely if they succeed on a dodge roll against its spell level.
-    MAKE_FILTHY, // requires LIQUID. The liquid splashed by this spell can add the FILTHY flag to items worn by characters, accoridng to its liquid_volume and type
+    EVOCATION_SPELL, // Evocation spell category, used for Magiclysm proficiencies
+    CHANNELING_SPELL, // Channeling spell category, used for Magiclysm proficiencies
+    CONJURATION_SPELL, // Conjuration spell category, used for Magiclysm proficiencies
+    ENHANCEMENT_SPELL, // Enhancement spell category, used for Magiclysm proficiencies
+    ENERVATION_SPELL, // Enervation spell category, used for Magiclysm proficiencies
+    CONVEYANCE_SPELL, // Conveyance spell category, used for Magiclysm proficiencies
+    RESTORATION_SPELL, // Restoration spell category, used for Magiclysm proficiencies
+    TRANSFORMATION_SPELL, // Transformation spell category, used for Magiclysm proficiencies
     LAST
 };
 
@@ -253,14 +258,6 @@ class spell_type
         // field intensity added to the map is +- ( 1 + field_intensity_variance ) * field_intensity
         dbl_or_var field_intensity_variance;
 
-        // intensity of any effects this spell applies to a target via effect_str. Also affects the
-        // fire_data used to apply the onfire effect if it ignites a character's armor via a splash attack
-        // defaults to 1 if unset
-        dbl_or_var min_effect_intensity;
-        dbl_or_var effect_intensity_increment;
-        dbl_or_var max_effect_intensity;
-        dbl_or_var effect_intensity_variance;
-
         // accuracy is a bonus against dodge, block, and spellcraft
         // which allows the target to mitigate up to 33% damage for each type of resistance
         // this could theoretically add up to 100%
@@ -268,19 +265,6 @@ class spell_type
         dbl_or_var min_accuracy;
         dbl_or_var accuracy_increment;
         dbl_or_var max_accuracy;
-
-        // characters who attempt to dodge this spell will only train their skill to this rank +1
-        // only used for DODGEABLE spells
-        dbl_or_var min_dodge_training;
-        dbl_or_var dodge_training_increment;
-        dbl_or_var max_dodge_training;
-
-        // minimum amount of liquid splashed on a target by this spell
-        dbl_or_var min_liquid_volume;
-        // amount of liquid to increase per spell level
-        dbl_or_var liquid_volume_increment;
-        // maximum amount of liquid splashed on a target by this spell
-        dbl_or_var max_liquid_volume;
 
         // minimum damage this spell can cause
         dbl_or_var min_damage;
@@ -405,24 +389,14 @@ class spell_type
         static const std::string sound_variant_default;
         static const std::string effect_str_default;
         static const std::optional<field_type_id> field_default;
-        static const float field_chance_default;
+        static const int field_chance_default;
         static const int min_field_intensity_default;
         static const int max_field_intensity_default;
         static const float field_intensity_increment_default;
         static const float field_intensity_variance_default;
-        static const int min_effect_intensity_default;
-        static const float effect_intensity_increment_default;
-        static const int max_effect_intensity_default;
-        static const float effect_intensity_variance_default;
         static const int min_accuracy_default;
         static const float accuracy_increment_default;
         static const int max_accuracy_default;
-        static const int min_dodge_training_default;
-        static const float dodge_training_increment_default;
-        static const int max_dodge_training_default;
-        static const int min_liquid_volume_default;
-        static const float liquid_volume_increment_default;
-        static const int max_liquid_volume_default;
         static const int min_damage_default;
         static const float damage_increment_default;
         static const int max_damage_default;
@@ -466,6 +440,7 @@ class spell
 
         // Temporary adjustments caused by EoC's
         int temp_level_adjustment = 0; // NOLINT(cata-serialize)
+        float temp_damage_multiplyer = 1; // NOLINT(cata-serialize)
         float temp_cast_time_multiplyer = 1; // NOLINT(cata-serialize)
         float temp_spell_cost_multiplyer = 1; // NOLINT(cata-serialize)
         float temp_aoe_multiplyer = 1; // NOLINT(cata-serialize)
@@ -488,9 +463,6 @@ class spell
         // minimum duration including levels (moves)
         int min_leveled_duration( const Creature &caster ) const;
         int min_leveled_accuracy( const Creature &caster ) const;
-        int min_leveled_effect_intensity( const Creature &caster ) const;
-        int min_leveled_dodge_training( const Creature &caster ) const;
-        int min_leveled_liquid_volume( const Creature &caster ) const;
 
     public:
         spell() = default;
@@ -533,9 +505,6 @@ class spell
         // how much damage does the spell do
         int damage( const Creature &caster ) const;
         int accuracy( Creature &caster ) const;
-        int effect_intensity( Creature &caster ) const;
-        float dodge_training( Creature &caster ) const;
-        int liquid_volume( Creature &caster ) const;
         int damage_dot( const Creature &caster ) const;
         damage_over_time_data damage_over_time( const std::vector<bodypart_str_id> &bps,
                                                 const Creature &caster ) const;
@@ -634,9 +603,6 @@ class spell
         std::string aoe_string( const Creature &caster ) const;
         std::string duration_string( const Creature &caster ) const;
 
-        spell_id get_spell_type() const {
-            return type;
-        }
         // magic energy source enum
         magic_energy_type energy_source() const;
         // the color that's representative of the damage type
@@ -648,7 +614,6 @@ class spell
         int get_effective_level() const;
         // difficulty of the level
         int get_difficulty( const Creature &caster ) const;
-
         mod_id get_src() const;
 
         // tries to create a field at the location specified
@@ -661,10 +626,16 @@ class spell
         // heals the critter at the location, returns amount healed (Character heals each body part)
         int heal( const tripoint &target, Creature &caster ) const;
 
+        // casts the spell effect from an item.  less functionality compared to creature casting.
+        void cast_spell_effect( const tripoint &target ) const;
         // casts the spell effect. returns true if successful
         void cast_spell_effect( Creature &source, const tripoint &target ) const;
         // goes through the spell effect and all of its internal spells
+        void cast_all_effects( const tripoint &target ) const;
+        // goes through the spell effect and all of its internal spells
         void cast_all_effects( Creature &source, const tripoint &target ) const;
+        // goes through the spell effect and all of its internal spells
+        void cast_extra_spell_effects( const tripoint &target ) const;
         // goes through the spell effect and all of its internal spells
         void cast_extra_spell_effects( Creature &source, const tripoint &target ) const;
         // uses up the components in @guy's inventory
@@ -726,8 +697,8 @@ class known_magic
         // gets the spell associated with the spell_id to be edited
         spell &get_spell( const spell_id &sp );
         // opens up a ui that the Character can choose a spell from
-        // returns the index of the spell in the vector of spells
-        int select_spell( Character &guy );
+        // returns the selected spell
+        spell &select_spell( Character &guy );
         // get all known spells
         std::vector<spell *> get_spells();
         // directly get the character known spells
@@ -763,13 +734,15 @@ class known_magic
         // returns false if invlet is already used
         bool set_invlet( const spell_id &sp, int invlet, const std::set<int> &used_invlets );
         void rem_invlet( const spell_id &sp );
+        // returns which invlets are already in use
+        void update_used_invlets( std::set<int> &used_invlets );
 
         void toggle_favorite( const spell_id &sp );
         bool is_favorite( const spell_id &sp );
     private:
         // gets length of longest spell name
         int get_spellname_max_width();
-        // gets invlet if assigned, or -1 if not
+        // gets invlet if assigned, or 0 if not
         int get_invlet( const spell_id &sp, std::set<int> &used_invlets );
 };
 
@@ -907,6 +880,7 @@ class spellbook_callback : public uilist_callback
     public:
         void add_spell( const spell_id &sp );
         void refresh( uilist *menu ) override;
+        float desired_extra_space_right( ) override;
 };
 
 // Utility structure to run area queries over weight map. It uses shortest-path-expanding-tree,
