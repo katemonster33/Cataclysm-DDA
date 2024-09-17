@@ -421,6 +421,11 @@ class item : public visitable
          * charges at all). Calls @ref tname with given quantity and with_prefix being true.
          */
         std::string display_name( unsigned int quantity = 1 ) const;
+
+        std::vector<iteminfo> get_info( bool showtext ) const;
+        std::vector<iteminfo> get_info( bool showtext, int batch ) const;
+        std::vector<iteminfo> get_info( const iteminfo_query *parts, int batch ) const;
+
         /**
          * Return all the information about the item and its type.
          *
@@ -1679,6 +1684,10 @@ class item : public visitable
 
         /** What faults can potentially occur with this item? */
         std::set<fault_id> faults_potential() const;
+
+        bool can_have_fault_type( const std::string &fault_type ) const;
+
+        std::set<fault_id> faults_potential_of_type( const std::string &fault_type ) const;
 
         /** Returns the total area of this wheel or 0 if it isn't one. */
         int wheel_area() const;

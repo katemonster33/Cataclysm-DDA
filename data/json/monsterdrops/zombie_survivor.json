@@ -262,8 +262,7 @@
         "distribution": [
           { "group": "guns_smg_improvised", "prob": 10 },
           { "group": "guns_rifle_improvised", "prob": 100 },
-          { "group": "guns_shotgun_improvised", "prob": 100 },
-          { "group": "guns_launcher_improvised", "prob": 30 }
+          { "group": "guns_shotgun_improvised", "prob": 100 }
         ],
         "prob": 200
       },
@@ -338,7 +337,7 @@
       [ "pot_helmet", 7 ],
       [ "helmet_army", 4 ],
       [ "hat_hard", 22 ],
-      [ "miner_hat", 9 ],
+      { "group": "hat_hard_flashlight", "prob": 9 },
       [ "firehelmet", 10 ],
       [ "chainmail_junk_hood", 1 ],
       [ "pickelhaube", 1 ]

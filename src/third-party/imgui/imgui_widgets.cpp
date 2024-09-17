@@ -1493,6 +1493,18 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags, float thickness)
         float x1 = window->DC.CursorPos.x;
         float x2 = window->WorkRect.Max.x;
 
+        // FIXME-WORKRECT: old hack (#205) until we decide of consistent behavior with WorkRect/Indent and Separator
+        if (g.GroupStack.Size > 0 && g.GroupStack.back().WindowID == window->ID)
+            x1 += window->DC.Indent.x;
+
+        // FIXME-WORKRECT: In theory we should simply be using WorkRect.Min.x/Max.x everywhere but it isn't aesthetically what we want,
+        // need to introduce a variant of WorkRect for that purpose. (#4787)
+        if (ImGuiTable* table = g.CurrentTable)
+        {
+            x1 = table->Columns[table->CurrentColumn].MinX;
+            x2 = table->Columns[table->CurrentColumn].MaxX;
+        }
+
         // Preserve legacy behavior inside Columns()
         // Before Tables API happened, we relied on Separator() to span all columns of a Columns() set.
         // We currently don't need to provide the same feature for tables because tables naturally have border features.

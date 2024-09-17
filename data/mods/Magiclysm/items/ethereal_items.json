@@ -221,17 +221,7 @@
     "longest_side": "40 cm",
     "material": [ "bone", "flesh" ],
     "techniques": [ "PRECISE", "RAPID", "WBLOCK_2" ],
-    "flags": [
-      "REACH_ATTACK",
-      "REACH3",
-      "WHIP",
-      "STURDY",
-      "TRADER_AVOID",
-      "UNBREAKABLE_MELEE",
-      "NO_REPAIR",
-      "NO_SALVAGE",
-      "MAGIC_FOCUS"
-    ],
+    "flags": [ "REACH_ATTACK", "REACH3", "WHIP", "STURDY", "TRADER_AVOID", "UNBREAKABLE_MELEE", "NO_REPAIR", "MAGIC_FOCUS" ],
     "category": "weapons",
     "melee_damage": { "cut": 30 }
   },
@@ -313,7 +303,6 @@
       "SHEATH_SPEAR",
       "ONLY_ONE",
       "NO_REPAIR",
-      "NO_SALVAGE",
       "MAGIC_FOCUS"
     ],
     "techniques": [ "WBLOCK_2", "WIDE", "SWEEP", "BRUTAL" ],
@@ -688,16 +677,7 @@
     "description": "A pulsating club made of bone, stained with an ever-moving blood coating eager to absorb the living.",
     "material": [ "bone", "flesh" ],
     "weapon_category": [ "BATONS" ],
-    "flags": [
-      "UNBREAKABLE_MELEE",
-      "NONCONDUCTIVE",
-      "ONLY_ONE",
-      "NO_REPAIR",
-      "NO_SALVAGE",
-      "MAGIC_FOCUS",
-      "BELT_CLIP",
-      "TRADER_AVOID"
-    ],
+    "flags": [ "UNBREAKABLE_MELEE", "NONCONDUCTIVE", "ONLY_ONE", "NO_REPAIR", "MAGIC_FOCUS", "BELT_CLIP", "TRADER_AVOID" ],
     "techniques": [ "WBLOCK_2", "RAPID", "PRECISE" ],
     "weight": "700 g",
     "volume": "800 ml",
@@ -1578,43 +1558,6 @@
         "covers": [ "leg_l", "leg_r", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r", "mouth", "eyes" ]
       }
     ]
-  },
-  {
-    "id": "aura_druid_waterwalk",
-    "type": "ARMOR",
-    "name": "Waterstrider's Walk",
-    "description": "You can easily walk on the surface of the water.",
-    "weight": "0 g",
-    "volume": "0 ml",
-    "price": "0 cent",
-    "material": [ "concentrated_mana" ],
-    "symbol": "O",
-    "color": "blue",
-    "flags": [
-      "AURA",
-      "SEMITANGIBLE",
-      "ONLY_ONE",
-      "PADDED",
-      "INTEGRATED",
-      "ALLOWS_NATURAL_ATTACKS",
-      "TRADER_AVOID",
-      "WATER_FRIENDLY",
-      "NO_REPAIR",
-      "NO_TAKEOFF",
-      "ZERO_WEIGHT",
-      "NONCONDUCTIVE",
-      "FLOTATION"
-    ],
-    "relic_data": {
-      "passive_effects": [
-        {
-          "has": "WORN",
-          "condition": "ALWAYS",
-          "values": [ { "value": "MAX_MANA", "add": 0 } ],
-          "ench_effects": [ { "effect": "effect_item_protection_water", "intensity": 1 } ]
-        }
-      ]
-    }
   },
   {
     "id": "item_earthshaper_map_01",
