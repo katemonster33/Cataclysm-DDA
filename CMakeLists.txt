@@ -13,6 +13,7 @@ set(CMAKE_TLS_VERIFY ON)
 
 # Build options
 include(CMakeDependentOption)
+include(ExternalProject)
 option(TILES "Build graphical tileset version." "OFF")
 option(CURSES "Build curses version." "ON")
 option(SOUND "Support for in-game sounds & music." "OFF")
@@ -90,6 +91,12 @@ if ("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     if (TILES)
         add_definitions(-DOSX_SDL2_LIBS)
     endif ()
+endif ()
+
+if (ANDROID)
+    set(TILES 1)
+    set(SOUND 1)
+    set(RELEASE 1)
 endif ()
 
 include(CheckCXXCompilerFlag)
@@ -267,44 +274,70 @@ find_package(ZLIB REQUIRED)
 # Check for build types and libraries
 if (TILES)
     # Find SDL, SDL_ttf & SDL_image for graphical install
-    message(STATUS "Searching for SDL2 library --")
-    if (NOT CMAKE_FIND_PACKAGE_PREFER_CONFIG)
-        set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
-        # ^^ Use sdl2-config.cmake provided by the system or VCPKG
-        find_package(SDL2)
-        if(NOT SDL2_FOUND)
-            # Use our CMakeModules/Find/FindSDL2.cmake
-            set(CMAKE_FIND_PACKAGE_PREFER_CONFIG OFF)
+    if(ANDROID)
+    message(STATUS "Downloading SDL2 --")
+        ExternalProject_Add(SDL2
+            GIT_REPOSITORY https://github.com/katemonster33/SDL.git
+            #CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${EXTERNAL_INSTALL_LOCATION}
+            GIT_TAG origin/cdda_android
+            GIT_SHALLOW 1)
+        link_libraries(SDL2)
+
+        message(STATUS "Downloading SDL2_ttf --")
+        ExternalProject_Add(SDL2_ttf
+            GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf.git
+            #CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${EXTERNAL_INSTALL_LOCATION}
+            GIT_TAG origin/tags/release-2.22.0
+            GIT_SHALLOW 1)
+        link_libraries(SDL2_ttf)
+
+        message(STATUS "Downloading SDL2_image --")
+        ExternalProject_Add(SDL2_image
+            GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
+            #CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${EXTERNAL_INSTALL_LOCATION}
+            GIT_TAG origin/tags/release-2.8.2
+            GIT_SHALLOW 1)
+        link_libraries(SDL2_image)
+    else ()
+        message(STATUS "Searching for SDL2 library --")
+        if (NOT CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+            set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+            # ^^ Use sdl2-config.cmake provided by the system or VCPKG
             find_package(SDL2)
+            if(NOT SDL2_FOUND)
+                # Use our CMakeModules/Find/FindSDL2.cmake
+                set(CMAKE_FIND_PACKAGE_PREFER_CONFIG OFF)
+                find_package(SDL2)
+            endif()
+            set(CMAKE_FIND_PACKAGE_PREFER_CONFIG OFF)
         endif()
-        set(CMAKE_FIND_PACKAGE_PREFER_CONFIG OFF)
-    endif()
-    if (NOT (SDL2_FOUND OR TARGET SDL2::SDL2 OR TARGET SDL2::SDL2-static))
-        message(FATAL_ERROR
-                "This project requires SDL2 to be installed to compile in graphical mode.  \
-                 Please install the SDL2 development libraries, \
-                 or try compiling without -DTILES=1 for a text-only compilation. \
-                 See doc/COMPILING/COMPILING-CMAKE.md for details and more info.")
-    endif ()
+        if (NOT (SDL2_FOUND OR TARGET SDL2::SDL2 OR TARGET SDL2::SDL2-static))
+            message(FATAL_ERROR
+                    "This project requires SDL2 to be installed to compile in graphical mode.  \
+                    Please install the SDL2 development libraries, \
+                    or try compiling without -DTILES=1 for a text-only compilation. \
+                    See doc/COMPILING/COMPILING-CMAKE.md for details and more info.")
+        endif ()
 
-    message(STATUS "Searching for SDL2_TTF library --")
-    find_package(SDL2_ttf)
-    if (NOT (SDL2_TTF_FOUND OR TARGET SDL2::SDL2_ttf OR TARGET SDL2_ttf::SDL2_ttf-static))
-        message(FATAL_ERROR
-                "This project requires SDL2_ttf to be installed to compile in graphical mode. \
-                 Please install the SDL2_ttf development libraries, \
-                 or try compiling without -DTILES=1 for a text-only compilation. \
-                 See doc/COMPILING/COMPILING-CMAKE.md for details and more info.")
-    endif ()
+        message(STATUS "Searching for SDL2_TTF library --")
+        find_package(SDL2_ttf)
+        if (NOT (SDL2_TTF_FOUND OR TARGET SDL2::SDL2_ttf OR TARGET SDL2_ttf::SDL2_ttf-static))
+            message(FATAL_ERROR
+                    "This project requires SDL2_ttf to be installed to compile in graphical mode. \
+                    Please install the SDL2_ttf development libraries, \
+                    or try compiling without -DTILES=1 for a text-only compilation. \
+                    See doc/COMPILING/COMPILING-CMAKE.md for details and more info.")
+        endif ()
 
-    message(STATUS "Searching for SDL2_image library --")
-    find_package(SDL2_image)
-    if (NOT (SDL2_IMAGE_FOUND OR TARGET SDL2::SDL2_image OR TARGET SDL2_image::SDL2_image-static))
-        message(FATAL_ERROR
-                "This project requires SDL2_image to be installed to compile in graphical mode. \
-                 Please install the SDL2_image development libraries, \
-                 or try compiling without -DTILES=1 for a text-only compilation. \
-                 See doc/COMPILING/COMPILING-CMAKE.md for details and more info.")
+        message(STATUS "Searching for SDL2_image library --")
+        find_package(SDL2_image)
+        if (NOT (SDL2_IMAGE_FOUND OR TARGET SDL2::SDL2_image OR TARGET SDL2_image::SDL2_image-static))
+            message(FATAL_ERROR
+                    "This project requires SDL2_image to be installed to compile in graphical mode. \
+                    Please install the SDL2_image development libraries, \
+                    or try compiling without -DTILES=1 for a text-only compilation. \
+                    See doc/COMPILING/COMPILING-CMAKE.md for details and more info.")
+        endif ()
     endif ()
     add_definitions(-DTILES)
 endif ()

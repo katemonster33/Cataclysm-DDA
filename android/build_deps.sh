@@ -11,10 +11,13 @@ SDL2_mixer_branch=release-2.8.0
 SDL2_ttf_URL=https://github.com/libsdl-org/SDL_ttf.git
 SDL2_ttf_branch=release-2.22.0
 
+Freetype_Version=2.13.3
+Freetype_URL=https://download.savannah.gnu.org/releases/freetype/freetype-$Freetype_Version.tar.gz
+
 DEPS_ZIP_PATH=$(dir $1)/
 
 # Global Variables #
-NDK_DIR="/home/katie/android-ndk-r26b/"
+NDK_DIR=$(realpath ~/android-ndk-r26d/)
 INSTALL_DIR=$(pwd)
 API="26"
 
@@ -88,10 +91,16 @@ clone_proj SDL2_ttf $SDL2_ttf_URL $SDL2_ttf_branch
 ./SDL2_mixer/external/download.sh
 ./SDL2_ttf/external/download.sh
 
+wget $Freetype_URL
+tar xzf freetype-$Freetype_Version.tar.gz
+mkdir freetype-$Freetype_Version/build
+
 cp -f SDL2/include/*.h deps/jni/SDL2/include/
 cp -f SDL2_image/include/*.h deps/jni/SDL2_image/
 cp -f SDL2_mixer/include/*.h deps/jni/SDL2_mixer/
 cp -f SDL2_ttf/SDL_ttf.h deps/jni/SDL2_ttf/
+mkdir -p deps/jni/freetype/include
+cp -f freetype-$Freetype_Version/include/*.h deps/jni/freetype/
 
 for ARCH in armeabi-v7a arm64-v8a x86 x86_64
 do
@@ -104,6 +113,18 @@ do
     build_proj SDL2_mixer true
 
     build_proj SDL2_ttf true
+
+
+    cd freetype-$Freetype_Version/build
+    cmake -DCMAKE_TOOLCHAIN_FILE=$NDK_DIR/build/cmake/android.toolchain.cmake\
+     -DANDROID_NDK=$NDK_DIR\
+     -DCMAKE_BUILD_TYPE=Release\
+     -DANDROID_ABI="$ARCH"\
+     ..
+    make -j4
+    mkdir ../../deps/jni/freetype/$ARCH/
+    cp libfreetype.a ../../deps/jni/freetype/$ARCH/
+    cd ../../
 done
 cd deps
 zip ../deps.zip jni/ -r
