@@ -1911,6 +1911,8 @@ class Character : public Creature, public visitable
         bool enough_power_for( const bionic_id &bid ) const;
         /** Handles and displays detailed character info for the '@' screen */
         void disp_info( bool customize_character = false );
+        void disp_info_imgui(bool customize_character = false);
+        std::vector<std::pair<std::string, std::string>> get_effects_str();
         /** Provides the window and detailed morale data */
         void disp_morale();
         /** Opens the medical window */

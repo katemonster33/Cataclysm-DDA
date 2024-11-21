@@ -90,9 +90,9 @@ namespace
 class player_disp_ui : cataimgui::window
 {
     const Character& you;
-    void draw_stats_tab_imgui(const Character &you, bool is_current_tab);
-    void draw_profs_tab_imgui(const Character& you,
-        const unsigned line, const player_display_tab curtab, const input_context& ctxt);
+    void draw_stats_tab_imgui(const Character &you, bool is_current_tab, std::string &infoText);
+    void draw_stats_info_imgui(const Character& you, const unsigned line);
+    void draw_profs_tab_imgui(const Character& you, bool is_current_tab);
     static nc_color& get_stat_col(const int val, const int max);
 
 public:
@@ -429,9 +429,10 @@ struct pdstat
 {
     std::string desc;
     std::string val;
+    std::string info;
 };
 
-size_t draw_stats(const std::vector<const pdstat>& stats, bool selectable)
+size_t draw_stats(const std::vector<pdstat>& stats, bool selectable)
 {
     bool selected = false;
     for (const pdstat& statItem : stats)
@@ -446,9 +447,10 @@ size_t draw_stats(const std::vector<const pdstat>& stats, bool selectable)
             ImGui::EndTable();
         }
     }
+    return 0;
 }
 
-void player_disp_ui::draw_stats_tab_imgui(const Character &you, bool is_current_tab)
+void player_disp_ui::draw_stats_tab_imgui(const Character &you, bool is_current_tab, std::string& infoText)
 {
     //werase(w_stats);
     //const bool is_current_tab = curtab == player_display_tab::stats;
@@ -465,8 +467,18 @@ void player_disp_ui::draw_stats_tab_imgui(const Character &you, bool is_current_
         return colorize(string_format("%d/%d", cur, max), get_stat_col(cur, max));
     };
 
-    std::vector<const pdstat> attributes {
-        {_("Strength:"), print_stat_val(you.get_str(), you.get_str_base())},
+    std::vector<pdstat> attributes {
+        {
+            _("Strength:"), 
+            print_stat_val(you.get_str(), you.get_str_base()),
+                colorize(_("Strength affects your melee damage, the amount of weight you can carry, your total HP, "
+            "your resistance to many diseases, and the effectiveness of actions which require brute force."), c_magenta) + 
+        cataimgui::draw_colored_text(string_format(_("Base HP: <color_white>%d</color>"),
+            you.get_part_hp_max(you.get_root_body_part())), c_light_gray);
+        cataimgui::draw_colored_text(string_format(_("Carry weight (%s): <color_white>%.1f</color>"), weight_units(),
+            convert_weight(you.weight_capacity())), c_light_gray);
+        cataimgui::draw_colored_text(string_format(_("Bash damage: <color_white>%.1f</color>"), you.bonus_damage(false)), c_light_gray);
+        },
         {_("Dexterity:"), print_stat_val(you.get_dex(), you.get_dex_base())},
         {_("Intelligence:"), print_stat_val(you.get_int(), you.get_int_base())},
         {_("Perception:"), print_stat_val(you.get_per(), you.get_per_base())},
@@ -476,7 +488,11 @@ void player_disp_ui::draw_stats_tab_imgui(const Character &you, bool is_current_
         {_("Age:"), you.age_string()},
         {_("Blood type:"), io::enum_to_string(you.my_blood_type) + (you.blood_rh_factor ? "+" : "-")}
     };
-    draw_stats(attributes, is_current_tab);
+    size_t selectedIdx = draw_stats(attributes, is_current_tab);
+    if (selectedIdx != SIZE_MAX)
+    {
+
+    }
 }
 
 static void draw_stats_tab( ui_adaptor &ui, const catacurses::window &w_stats, const Character &you,
@@ -568,6 +584,89 @@ static void draw_stats_tab( ui_adaptor &ui, const catacurses::window &w_stats, c
                io::enum_to_string( you.my_blood_type ) + ( you.blood_rh_factor ? "+" : "-" ) );
 
     wnoutrefresh( w_stats );
+}
+
+void player_disp_ui::draw_stats_info_imgui(const Character& you,
+    const unsigned line)
+{
+    nc_color col_temp = c_light_gray;
+
+    if (line == 0) {
+    }
+    else if (line == 1) {
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        fold_and_print(w_info, point(1, 0), FULL_SCREEN_WIDTH - 2, c_magenta,
+            _("Dexterity affects your chance to hit in melee combat, helps you steady your "
+                "gun for ranged combat, and enhances many actions that require finesse."));
+        print_colored_text(w_info, point(1, 3), col_temp, c_light_gray,
+            string_format(_("Melee to-hit bonus: <color_white>%+.1lf</color>"), you.get_melee_hit_base()));
+        print_colored_text(w_info, point(1, 4), col_temp, c_light_gray,
+            string_format(_("Ranged penalty: <color_white>%+d</color>"),
+                -std::abs(you.ranged_dex_mod())));
+        print_colored_text(w_info, point(1, 5), col_temp, c_light_gray,
+            string_format(_("Throwing penalty per target's dodge: <color_white>%+d</color>"),
+                you.throw_dispersion_per_dodge(false)));
+    }
+    else if (line == 2) {
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        fold_and_print(w_info, point(1, 0), FULL_SCREEN_WIDTH - 2, c_magenta,
+            _("Intelligence is less important in most situations, but it is vital for more complex tasks like "
+                "electronics crafting.  It also affects how much skill you can pick up from reading a book."));
+        print_colored_text(w_info, point(1, 4), col_temp, c_light_gray,
+            string_format(_("Read times: <color_white>%d%%</color>"), you.read_speed()));
+        print_colored_text(w_info, point(1, 5), col_temp, c_light_gray,
+            string_format(_("Crafting bonus: <color_white>%d%%</color>"), you.get_int()));
+    }
+    else if (line == 3) {
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        fold_and_print(w_info, point(1, 0), FULL_SCREEN_WIDTH - 2, c_magenta,
+            _("Perception is the most important stat for ranged combat.  It's also used for "
+                "detecting traps and other things of interest."));
+        print_colored_text(w_info, point(1, 4), col_temp, c_light_gray,
+            string_format(_("Trap detection level: <color_white>%d</color>"), you.get_per()));
+        if (you.ranged_per_mod() > 0) {
+            print_colored_text(w_info, point(1, 5), col_temp, c_light_gray,
+                string_format(_("Aiming penalty: <color_white>%+d</color>"), -you.ranged_per_mod()));
+        }
+    }
+    else if (line == 4) {
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        const int lines = fold_and_print(w_info, point(1, 0), FULL_SCREEN_WIDTH - 2, c_magenta,
+            _("Your weight is a general indicator of how much fat your body has stored up,"
+                " which in turn shows how prepared you are to survive for a time without food."
+                "  Having too much, or too little, can be unhealthy."));
+        fold_and_print(w_info, point(1, 1 + lines), FULL_SCREEN_WIDTH - 2, c_light_gray,
+            display::weight_long_description(you));
+    }
+    else if (line == 5) {
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        fold_and_print(w_info, point(1, 0), FULL_SCREEN_WIDTH - 2, c_magenta,
+            _("How healthy you feel.  Exercise, vitamins, sleep and not ingesting poison will increase this over time."));
+    }
+    else if (line == 6) {
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        const int lines = fold_and_print(w_info, point(1, 0), FULL_SCREEN_WIDTH - 2, c_magenta,
+            _("Your height.  Simply how tall you are."));
+        fold_and_print(w_info, point(1, 1 + lines), FULL_SCREEN_WIDTH - 2, c_light_gray,
+            you.height_string());
+    }
+    else if (line == 7) {
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        const int lines = fold_and_print(w_info, point(1, 0), FULL_SCREEN_WIDTH - 2, c_magenta,
+            _("This is how old you are."));
+        fold_and_print(w_info, point(1, 1 + lines), FULL_SCREEN_WIDTH - 2, c_light_gray,
+            you.age_string());
+    }
+    else if (line == 8) {
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        const int lines = fold_and_print(w_info, point(1, 0), FULL_SCREEN_WIDTH - 2, c_magenta,
+            _("This is your blood type and Rh factor."));
+        fold_and_print(w_info, point(1, 1 + lines), FULL_SCREEN_WIDTH - 2, c_light_gray,
+            string_format(_("Blood type: %s"), io::enum_to_string(you.my_blood_type)));
+        fold_and_print(w_info, point(1, 2 + lines), FULL_SCREEN_WIDTH - 2, c_light_gray,
+            string_format(_("Rh factor: %s"),
+                you.blood_rh_factor ? _("positive (+)") : _("negative (-)")));
+    }
 }
 
 static void draw_stats_info( const catacurses::window &w_info, const Character &you,
@@ -1602,6 +1701,236 @@ static bool handle_player_display_action( Character &you, unsigned int &line,
     return done;
 }
 
+static bool handle_player_display_action_imgui(Character& you, unsigned int& line,
+    unsigned int& info_line,
+    player_display_tab& curtab, input_context& ctxt, 
+    const std::vector<speedlist_entry>& speedlist,
+    std::vector<trait_and_var>& traitslist,
+    const std::vector<bionic_grouping>& bionicslist,
+    const std::vector<std::pair<std::string, std::string>>& effect_name_and_text,
+    const std::vector<HeaderSkill>& skillslist, bool customize_character,
+    const std::vector<catacurses::window*>& windows, const catacurses::window& w_tip,
+    int& tip_btn_selected)
+{
+
+    unsigned int line_count = get_line_count(curtab, you, speedlist, traitslist, bionicslist,
+        effect_name_and_text, skillslist);
+
+    if (line_count > 0) {
+        line = std::clamp(line, 0U, line_count - 1);
+        if (curtab == player_display_tab::skills) {
+            skip_skill_headers(skillslist, line, true);
+        }
+    }
+    else {
+        line = 0;
+    }
+
+    bool done = false;
+    const std::string action = ctxt.handle_input();
+
+    if (navigate_ui_list(action, line, 3, line_count, true)) {
+        if (tip_btn_selected != -1) {
+            tip_btn_selected = -1;
+        }
+        if (curtab == player_display_tab::skills) {
+            // including actios "PAGE_UP", and "HOME", because these shouldn't wrap
+            const bool inc = action == "DOWN" || action == "PAGE_DOWN" || action == "PAGE_UP" ||
+                action == "SCROLL_DOWN" || action == "HOME";
+            skip_skill_headers(skillslist, line, inc);
+        }
+        info_line = 0;
+    }
+    else if (action == "MOUSE_MOVE") {
+        int orig_tip_btn = tip_btn_selected;
+        tip_btn_selected = -1;
+        std::optional<point> p;
+        for (size_t i = 0; i < windows.size(); i++) {
+            p = ctxt.get_coordinates_text(*windows[i]);
+            if (p.has_value() && window_contains_point_relative(*windows[i], p.value())) {
+                curtab = player_display_tab(i);
+                line_count = get_line_count(curtab, you, speedlist, traitslist, bionicslist, effect_name_and_text,
+                    skillslist);
+                line = std::clamp(p.value().y - 1, 0, int(line_count));
+                break;
+            }
+        }
+        p = ctxt.get_coordinates_text(w_tip);
+        if (p.has_value() && window_contains_point_relative(w_tip, p.value())) {
+            int rightX = catacurses::getmaxx(w_tip) - p.value().x;
+            if (rightX > 1 && rightX < 5) {
+                tip_btn_selected = 2;
+            }
+            else if (rightX >= 7 && rightX < 17) {
+                tip_btn_selected = 1;
+            }
+            else if (customize_character && rightX > 17 && rightX <= 30) {
+                tip_btn_selected = 0;
+            }
+        }
+        if (orig_tip_btn != tip_btn_selected) {
+            //ui_tip.invalidate_ui();
+        }
+    }
+    else if (action == "LEFT" || action == "PREV_TAB" || action == "RIGHT" || action == "NEXT_TAB") {
+        if (tip_btn_selected != -1) {
+            tip_btn_selected = -1;
+        }
+        curtab = inc_clamp_wrap(curtab, action == "RIGHT" || action == "NEXT_TAB",
+            player_display_tab::num_tabs);
+        line = curtab == player_display_tab::skills ? 1 : 0; // avoid a call to skip_skill_headers
+        info_line = 0;
+    }
+    else if (action == "SELECT_TRAIT_VARIANT") {
+        if (curtab == player_display_tab::traits) {
+            const mutation_variant* var = traitslist[line].trait->pick_variant_menu();
+            you.set_mut_variant(traitslist[line].trait, var);
+            const std::string& varid = var == nullptr ? "" : var->id;
+            traitslist[line].variant = varid;
+        }
+    }
+    else if (action == "QUIT") {
+        done = true;
+    }
+    else if (action == "CONFIRM" || action == "SELECT") {
+        bool header_clicked = false;
+        if (action == "SELECT") {
+            header_clicked = false;
+            int mouse_line = -1;
+            if (curtab < player_display_tab::num_tabs) {
+                std::optional<point> p = ctxt.get_coordinates_text(*windows[int(curtab)]);
+                if (p.has_value() && window_contains_point_relative(*windows[int(curtab)], p.value())) {
+                    mouse_line = std::clamp(p.value().y - 1, 0, int(line_count));
+                    header_clicked = p.value().y == 0;
+                    if (curtab == player_display_tab::skills && skillslist[mouse_line].is_header) {
+                        mouse_line = -1;
+                    }
+                }
+            }
+            if (tip_btn_selected != -1) {
+                switch (tip_btn_selected) {
+                case 0:
+                    if (customize_character) {
+                        on_customize_character(you);
+                    }
+                    break;
+                case 1:
+                    you.disp_morale();
+                    break;
+                case 2:
+                    ctxt.display_menu();
+                    break;
+                }
+                return done;
+            }
+            else if (mouse_line == -1) {
+                return done;
+            }
+        }
+        switch (curtab) {
+        default:
+            break;
+        case player_display_tab::stats:
+            if (header_clicked) {
+                display_bodygraph(you);
+            }
+            else if (line < 4 && get_option<bool>("STATS_THROUGH_KILLS") && you.is_avatar()) {
+                you.as_avatar()->upgrade_stat_prompt(static_cast<character_stat>(line));
+            }
+            break;
+        case player_display_tab::skills: {
+            const Skill* selectedSkill = nullptr;
+            if (line < skillslist.size() && !skillslist[line].is_header) {
+                selectedSkill = skillslist[line].skill;
+            }
+            if (selectedSkill) {
+                you.get_skill_level_object(selectedSkill->ident()).toggleTraining();
+            }
+            break;
+        }
+        case player_display_tab::proficiencies:
+            const std::vector<display_proficiency> profs = you.display_proficiencies();
+            if (!profs.empty()) {
+                show_proficiencies_window(you, profs[line].id);
+            }
+            break;
+        }
+    }
+    else if (action == "CHANGE_PROFESSION_NAME") {
+        string_input_popup popup;
+        popup.title(_("Profession Name: "))
+            .width(25)
+            .text("")
+            .max_length(25)
+            .query();
+
+        you.custom_profession = popup.text();
+    }
+    else if (action == "VIEW_PROFICIENCIES") {
+        show_proficiencies_window(you);
+
+    }
+    else if (action == "morale") {
+        you.disp_morale();
+    }
+    else if (action == "VIEW_BODYSTAT") {
+        display_bodygraph(you);
+    }
+    else if (customize_character && action == "SWITCH_GENDER") {
+        on_customize_character(you);
+    }
+    else if (action == "SCROLL_INFOBOX_UP") {
+        if (info_line > 0) {
+            --info_line;
+        }
+    }
+    else if (action == "SCROLL_INFOBOX_DOWN") {
+        ++info_line;
+    }
+    else if (action == "MEDICAL_MENU") {
+        you.disp_medical();
+    }
+    else if (action == "SELECT_STATS_TAB") {
+        curtab = player_display_tab::stats;
+        line = 0;
+        info_line = 0;
+    }
+    else if (action == "SELECT_ENCUMBRANCE_TAB") {
+        curtab = player_display_tab::encumbrance;
+        line = 0;
+        info_line = 0;
+    }
+    else if (action == "SELECT_SKILLS_TAB") {
+        curtab = player_display_tab::skills;
+        line = 1; // avoid a call to skip_skill_headers
+        info_line = 0;
+    }
+    else if (action == "SELECT_TRAITS_TAB") {
+        curtab = player_display_tab::traits;
+        line = 0;
+        info_line = 0;
+    }
+    else if (action == "SELECT_BIONICS_TAB") {
+        curtab = player_display_tab::bionics;
+        line = 0;
+        info_line = 0;
+    }
+    else if (action == "SELECT_EFFECTS_TAB") {
+        curtab = player_display_tab::effects;
+        line = 0;
+        info_line = 0;
+    }
+    else if (action == "SELECT_PROFICIENCIES_TAB") {
+        curtab = player_display_tab::proficiencies;
+        line = 0;
+        info_line = 0;
+    }
+    else if (action == "CHANGE_ARMOR_SPRITE") {
+        change_armor_sprite(you);
+    }
+    return done;
+}
+
 static std::pair<unsigned, unsigned> calculate_shared_column_win_height(
     const unsigned available_height, unsigned first_win_size_y_max, unsigned second_win_size_y_max )
 /**
@@ -2095,4 +2424,475 @@ void Character::disp_info( bool customize_character )
                                              effect_name_and_text, skillslist, customize_character,
                                              windows, w_tip, tip_btn_highlight );
     } while( !done );
+}
+
+std::vector<std::pair<std::string, std::string>> Character::get_effects_str()
+{
+    std::vector<std::pair<std::string, std::string>> effect_name_and_text;
+    for (auto& elem : *effects) {
+        for (auto& _effect_it : elem.second) {
+            const std::string name = _effect_it.second.disp_name();
+            effect_name_and_text.emplace_back(name, _effect_it.second.disp_desc());
+        }
+    }
+    if (get_perceived_pain() > 0) {
+        const stat_mod ppen = read_pain_penalty();
+        std::pair<std::string, nc_color> pain_desc = display::pain_text_color(*this);
+        std::string pain_text;
+        pain_desc.first = string_format(_("You are in %s\n"), pain_desc.first);
+        pain_text += colorize(pain_desc.first, pain_desc.second);
+        const auto add_if = [&](const int amount, const char* const name) {
+            if (amount > 0) {
+                pain_text += string_format(name, amount) + "   ";
+            }
+            };
+        add_if(ppen.strength, _("Strength -%d"));
+        add_if(ppen.dexterity, _("Dexterity -%d"));
+        add_if(ppen.intelligence, _("Intelligence -%d"));
+        add_if(ppen.perception, _("Perception -%d"));
+        add_if(ppen.speed, _("Speed -%d %%"));
+        effect_name_and_text.emplace_back(_("Pain"), pain_text);
+    }
+
+    const float bmi = get_bmi_fat();
+
+    if (bmi < character_weight_category::underweight) {
+        std::string starvation_name;
+        std::string starvation_text;
+
+        if (bmi < character_weight_category::emaciated) {
+            starvation_name = _("Severely Malnourished");
+            starvation_text =
+                _("Your body is severely weakened by starvation.  You might die if you don't start eating regular meals!\n\n");
+        }
+        else {
+            starvation_name = _("Malnourished");
+            starvation_text =
+                _("Your body is weakened by starvation.  Only time and regular meals will help you recover.\n\n");
+        }
+
+        if (bmi < character_weight_category::normal) {
+            const int str_penalty = std::floor((1.0f - (get_bmi_fat() /
+                character_weight_category::normal)) * str_max);
+            const int dexint_penalty = std::floor((character_weight_category::normal - bmi) * 3.0f);
+            starvation_text += std::string(_("Strength")) + " -" + string_format("%d\n",
+                str_penalty);
+            starvation_text += std::string(_("Dexterity")) + " -" + string_format("%d\n",
+                dexint_penalty);
+            starvation_text += std::string(_("Intelligence")) + " -" + string_format("%d",
+                dexint_penalty);
+        }
+
+        effect_name_and_text.emplace_back(starvation_name, starvation_text);
+    }
+
+    if (has_trait(trait_TROGLO3) && g->is_in_sunlight(pos())) {
+        effect_name_and_text.emplace_back(_("In Sunlight"),
+            _("The sunlight irritates you terribly.\n"
+                "Strength - 4;    Dexterity - 4;    Intelligence - 4;    Perception - 4")
+        );
+    }
+    else  if (has_trait(trait_TROGLO2) && g->is_in_sunlight(pos())) {
+        if (incident_sun_irradiance(get_weather().weather_id, calendar::turn) > irradiance::moderate) {
+            effect_name_and_text.emplace_back(_("In Sunlight"),
+                _("The sunlight irritates you badly.\n"
+                    "Strength - 2;    Dexterity - 2;    Intelligence - 2;    Perception - 2"));
+        }
+        else if (incident_sun_irradiance(get_weather().weather_id, calendar::turn) > irradiance::low) {
+            effect_name_and_text.emplace_back(_("In Sunlight"),
+                _("The sunlight irritates you badly.\n"
+                    "Strength - 1;    Dexterity - 1;    Intelligence - 1;    Perception - 1"));
+        }
+
+    }
+    else if (has_trait(trait_TROGLO) && g->is_in_sunlight(pos()) &&
+        incident_sun_irradiance(get_weather().weather_id, calendar::turn) > irradiance::moderate) {
+        effect_name_and_text.emplace_back(_("In Sunlight"),
+            _("The sunlight irritates you.\n"
+                "Strength - 1;    Dexterity - 1;    Intelligence - 1;    Perception - 1")
+        );
+    }
+
+    for (addiction& elem : addictions) {
+        if (elem.sated < 0_turns && elem.intensity >= MIN_ADDICTION_LEVEL) {
+            effect_name_and_text.emplace_back(elem.type->get_name().translated(),
+                elem.type->get_description().translated());
+        }
+    }
+
+    for (const std::pair<std::string, std::string>& detail : enchantment_cache->details) {
+        effect_name_and_text.emplace_back(detail);
+    }
+
+    // If any effects with no names have cropped up, let's remove them.
+    //   NB: This can happen if an effect no longer exists.
+    effect_name_and_text.erase(std::remove_if(effect_name_and_text.begin(),
+        effect_name_and_text.end(), [](const std::pair<std::string, std::string>& e) {
+            return e.first.empty();
+        }), effect_name_and_text.end());
+    return effect_name_and_text;
+}
+
+void Character::disp_info_imgui(bool customize_character)
+{
+    // Customizing any character is always enabled in debug mode
+    customize_character |= debug_mode;
+
+    std::vector<trait_and_var> traitslist = get_mutations_variants(false);
+    std::sort(traitslist.begin(), traitslist.end(), trait_var_display_sort);
+    const unsigned int trait_win_size_y_max = 1 + traitslist.size();
+
+    std::vector<bionic_grouping> bionicslist;
+    {
+        // count installed bionics by type and sort by localized name
+        const auto bio_comp = [](const bionic_data& lhs, const bionic_data& rhs) {
+            return lhs.name.translated_lt(rhs.name);
+            };
+        std::map<const bionic_data, int, decltype(bio_comp)> bionics_map(bio_comp);
+        for (const bionic& bio : *my_bionics) {
+            bionics_map[bio.info()]++;
+        }
+        for (const auto& pair : bionics_map) {
+            bionicslist.push_back({ pair.first.name, pair.first.description, pair.second });
+        }
+    }
+    const unsigned int bionics_win_size_y_max = 2 + bionicslist.size();
+
+    const std::vector<const Skill*> player_skill = Skill::get_skills_sorted_by(
+        [&](const Skill& a, const Skill& b) {
+            return a.get_sort_rank() < b.get_sort_rank();
+        });
+
+    std::vector<HeaderSkill> skillslist = get_HeaderSkills(player_skill);
+    const unsigned int skill_win_size_y_max = 1 + skillslist.size();
+    const unsigned int info_win_size_y = 6;
+
+    const unsigned int grid_height = 10;
+
+    const unsigned int infooffsetytop = grid_height + 2;
+    unsigned int infooffsetybottom = infooffsetytop + 1 + info_win_size_y;
+
+    // Print name and header
+    // Post-humanity trumps your pre-Cataclysm life
+    // Unless you have a custom profession.
+    std::string race;
+    if (custom_profession.empty() && crossed_threshold()) {
+        for (const trait_and_var& mut : get_mutations_variants()) {
+            if (mut.trait->threshold) {
+                race = mut.name();
+                break;
+            }
+        }
+    }
+
+    input_context ctxt("PLAYER_INFO");
+    ctxt.register_navigate_ui_list();
+    ctxt.register_action("COORDINATE");
+    ctxt.register_action("SELECT");
+    ctxt.register_action("MOUSE_MOVE");
+    ctxt.register_action("LEFT", to_translation("Cycle to next category"));
+    ctxt.register_action("RIGHT", to_translation("Cycle to previous category"));
+    ctxt.register_action("NEXT_TAB", to_translation("Cycle to next category"));
+    ctxt.register_action("PREV_TAB", to_translation("Cycle to previous category"));
+    ctxt.register_action("QUIT");
+    ctxt.register_action("CONFIRM", to_translation("Toggle skill training / Upgrade stat"));
+    ctxt.register_action("CHANGE_PROFESSION_NAME", to_translation("Change profession name"));
+    ctxt.register_action("SWITCH_GENDER", to_translation("Customize base appearance and name"));
+    ctxt.register_action("VIEW_PROFICIENCIES", to_translation("View character proficiencies"));
+    ctxt.register_action("VIEW_BODYSTAT", to_translation("View character's body status"));
+    ctxt.register_action("morale");
+    ctxt.register_action("SCROLL_INFOBOX_UP", to_translation("Scroll information box up"));
+    ctxt.register_action("SCROLL_INFOBOX_DOWN", to_translation("Scroll information box down"));
+    ctxt.register_action("SELECT_TRAIT_VARIANT");
+    ctxt.register_action("HELP_KEYBINDINGS");
+    ctxt.register_action("MEDICAL_MENU");
+    ctxt.register_action("CHANGE_ARMOR_SPRITE");
+    ctxt.register_action("SELECT_STATS_TAB");
+    ctxt.register_action("SELECT_ENCUMBRANCE_TAB");
+    ctxt.register_action("SELECT_SKILLS_TAB");
+    ctxt.register_action("SELECT_TRAITS_TAB");
+    ctxt.register_action("SELECT_BIONICS_TAB");
+    ctxt.register_action("SELECT_EFFECTS_TAB");
+    ctxt.register_action("SELECT_PROFICIENCIES_TAB");
+
+    std::map<std::string, int> speed_effects;
+    for (auto& elem : *effects) {
+        for (std::pair<const bodypart_id, effect>& _effect_it : elem.second) {
+            effect& it = _effect_it.second;
+            bool reduced = resists_effect(it);
+            int move_adjust = it.get_mod("SPEED", reduced);
+            if (move_adjust != 0) {
+                const std::string dis_text = it.get_speed_name();
+                speed_effects[dis_text] += move_adjust;
+            }
+        }
+    }
+
+    player_disp_ui imgui_ui(*this, this->get_name());
+
+    int move_cost;
+    std::vector<speedlist_entry> speedlist = get_speedlist_entries(*this, move_cost, speed_effects);
+
+    border_helper borders;
+
+    player_display_tab curtab = player_display_tab::stats;
+    // line marks at which line is selection in tab window, could be named tab_line
+    unsigned int line = 0;
+    // info_line marks at which line is selection in info window
+    unsigned int info_line = 0;
+    int tip_btn_highlight = -1;
+
+    catacurses::window w_tip;
+    ui_adaptor ui_tip;
+    ui_tip.on_screen_resize([&](ui_adaptor& ui_tip) {
+        w_tip = catacurses::newwin(1, FULL_SCREEN_WIDTH + 1, point_zero);
+        ui_tip.position_from_window(w_tip);
+        });
+    ui_tip.mark_resize();
+    ui_tip.on_redraw([&](ui_adaptor& ui_tip) {
+        ui_tip.disable_cursor();
+        draw_tip(w_tip, *this, race, ctxt, customize_character, tip_btn_highlight);
+        });
+
+    // STATS
+    catacurses::window w_stats;
+    catacurses::window w_stats_border;
+    border_helper::border_info& border_stats = borders.add_border();
+    ui_adaptor ui_stats;
+    ui_stats.on_screen_resize([&](ui_adaptor& ui_stats) {
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        w_stats = catacurses::newwin(grid_height, grid_width, point(0, 1));
+        // Every grid draws the bottom and right borders. The top and left borders
+        // are either not displayed or drawn by another grid.
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        w_stats_border = catacurses::newwin(grid_height + 1, grid_width + 1, point(0, 1));
+        // But we need to specify the full border for border_helper to calculate the
+        // border connection.
+        // NOLINTNEXTLINE(cata-use-named-point-constants)
+        border_stats.set(point(-1, 0), point(grid_width + 2, grid_height + 2));
+        ui_stats.position_from_window(w_stats_border);
+        });
+    ui_stats.mark_resize();
+    ui_stats.on_redraw([&](ui_adaptor& ui_stats) {
+        borders.draw_border(w_stats_border);
+        wnoutrefresh(w_stats_border);
+        ui_stats.disable_cursor();
+        draw_stats_tab(ui_stats, w_stats, *this, line, curtab, ctxt);
+        });
+
+    // TRAITS & BIONICS
+    unsigned trait_win_size_y;
+    unsigned bionics_win_size_y;
+    // TRAITS
+    catacurses::window w_traits;
+    catacurses::window w_traits_border;
+    border_helper::border_info& border_traits = borders.add_border();
+    ui_adaptor ui_traits;
+    ui_traits.on_screen_resize([&](ui_adaptor& ui_traits) {
+        std::tie(trait_win_size_y, bionics_win_size_y) = calculate_shared_column_win_height(
+            TERMY - infooffsetybottom, trait_win_size_y_max, bionics_win_size_y_max);
+        w_traits = catacurses::newwin(trait_win_size_y, grid_width,
+            point(grid_width + 1, infooffsetybottom));
+        w_traits_border = catacurses::newwin(trait_win_size_y + 1, grid_width + 2,
+            point(grid_width, infooffsetybottom));
+        border_traits.set(point(grid_width, infooffsetybottom - 1),
+            point(grid_width + 2, trait_win_size_y + 2));
+        ui_traits.position_from_window(w_traits_border);
+        });
+    ui_traits.mark_resize();
+    ui_traits.on_redraw([&](ui_adaptor& ui_traits) {
+        borders.draw_border(w_traits_border);
+        wnoutrefresh(w_traits_border);
+        ui_traits.disable_cursor();
+        draw_traits_tab(ui_traits, w_traits, line, curtab, traitslist, ctxt);
+        });
+
+    // BIONICS
+    catacurses::window w_bionics;
+    catacurses::window w_bionics_border;
+    border_helper::border_info& border_bionics = borders.add_border();
+    ui_adaptor ui_bionics;
+    ui_bionics.on_screen_resize([&](ui_adaptor& ui_bionics) {
+        std::tie(trait_win_size_y, bionics_win_size_y) = calculate_shared_column_win_height(
+            TERMY - infooffsetybottom, trait_win_size_y_max, bionics_win_size_y_max);
+        w_bionics = catacurses::newwin(bionics_win_size_y, grid_width,
+            point(grid_width + 1,
+                infooffsetybottom + trait_win_size_y + 1));
+        w_bionics_border = catacurses::newwin(bionics_win_size_y + 1, grid_width + 2,
+            point(grid_width, infooffsetybottom + trait_win_size_y + 1));
+        border_bionics.set(point(grid_width, infooffsetybottom + trait_win_size_y),
+            point(grid_width + 2, bionics_win_size_y + 2));
+        ui_bionics.position_from_window(w_bionics_border);
+        });
+    ui_bionics.mark_resize();
+    ui_bionics.on_redraw([&](ui_adaptor& ui_bionics) {
+        borders.draw_border(w_bionics_border);
+        wnoutrefresh(w_bionics_border);
+        ui_bionics.disable_cursor();
+        draw_bionics_tab(ui_bionics, w_bionics, *this, line, curtab, bionicslist, ctxt);
+        });
+
+    // ENCUMBRANCE
+    catacurses::window w_encumb;
+    catacurses::window w_encumb_border;
+    border_helper::border_info& border_encumb = borders.add_border();
+    ui_adaptor ui_encumb;
+    ui_encumb.on_screen_resize([&](ui_adaptor& ui_encumb) {
+        w_encumb = catacurses::newwin(grid_height, grid_width, point(grid_width + 1, 1));
+        w_encumb_border = catacurses::newwin(grid_height + 1, grid_width + 1, point(grid_width + 1, 1));
+        border_encumb.set(point(grid_width, 0), point(grid_width + 2, grid_height + 2));
+        ui_encumb.position_from_window(w_encumb_border);
+        });
+    ui_encumb.mark_resize();
+    ui_encumb.on_redraw([&](ui_adaptor& ui_encumb) {
+        borders.draw_border(w_encumb_border);
+        wnoutrefresh(w_encumb_border);
+        ui_encumb.disable_cursor();
+        draw_encumbrance_tab(ui_encumb, w_encumb, *this, line, curtab, ctxt);
+        });
+
+    // EFFECTS & PROFICIENCIES
+
+    std::vector<std::pair<std::string, std::string>> effect_name_and_text = get_effects_str();
+
+    const unsigned int effect_win_size_y_max = 1 + effect_name_and_text.size();
+    const unsigned int proficiency_win_size_y_max = 1 + display_proficiencies().size();
+
+    unsigned effect_win_size_y;
+    unsigned proficiency_win_size_y;
+    // EFFECTS
+    catacurses::window w_effects;
+    catacurses::window w_effects_border;
+    border_helper::border_info& border_effects = borders.add_border();
+    ui_adaptor ui_effects;
+    ui_effects.on_screen_resize([&](ui_adaptor& ui_effects) {
+        std::tie(effect_win_size_y, proficiency_win_size_y) = calculate_shared_column_win_height(
+            TERMY - infooffsetybottom, effect_win_size_y_max, proficiency_win_size_y_max);
+        w_effects = catacurses::newwin(effect_win_size_y, grid_width,
+            point(grid_width * 2 + 2, infooffsetybottom));
+        w_effects_border = catacurses::newwin(effect_win_size_y + 1, grid_width + 2,
+            point(grid_width * 2 + 1, infooffsetybottom));
+        border_effects.set(point(grid_width * 2 + 1, infooffsetybottom - 1),
+            point(grid_width + 2, effect_win_size_y + 2));
+        ui_effects.position_from_window(w_effects_border);
+        });
+    ui_effects.mark_resize();
+    ui_effects.on_redraw([&](ui_adaptor& ui_effects) {
+        borders.draw_border(w_effects_border);
+        wnoutrefresh(w_effects_border);
+        ui_effects.disable_cursor();
+        draw_effects_tab(ui_effects, w_effects, line, curtab, effect_name_and_text, ctxt);
+        });
+
+    // PROFICIENCIES
+    catacurses::window w_proficiencies;
+    catacurses::window w_proficiencies_border;
+    border_helper::border_info& border_proficiencies = borders.add_border();
+    ui_adaptor ui_proficiencies;
+    ui_proficiencies.on_screen_resize([&](ui_adaptor& ui_proficiencies) {
+        std::tie(effect_win_size_y, proficiency_win_size_y) = calculate_shared_column_win_height(
+            TERMY - infooffsetybottom, effect_win_size_y_max, proficiency_win_size_y_max);
+        const point profstart = point(grid_width * 2 + 2, infooffsetybottom + effect_win_size_y + 1);
+        w_proficiencies = catacurses::newwin(proficiency_win_size_y, grid_width,
+            profstart);
+        w_proficiencies_border = catacurses::newwin(proficiency_win_size_y + 1, grid_width + 2,
+            profstart + point_west);
+        border_proficiencies.set(profstart + point_north_west, point(grid_width + 2,
+            proficiency_win_size_y + 2));
+        ui_proficiencies.position_from_window(w_proficiencies_border);
+        });
+    ui_proficiencies.mark_resize();
+    ui_proficiencies.on_redraw([&](ui_adaptor& ui_proficiencies) {
+        borders.draw_border(w_proficiencies_border);
+        wnoutrefresh(w_proficiencies_border);
+        ui_proficiencies.disable_cursor();
+        draw_proficiencies_tab(ui_proficiencies, w_proficiencies, line, *this, curtab, ctxt);
+        });
+
+    // SKILLS
+    unsigned int skill_win_size_y = 0;
+    catacurses::window w_skills;
+    catacurses::window w_skills_border;
+    border_helper::border_info& border_skills = borders.add_border();
+    ui_adaptor ui_skills;
+    ui_skills.on_screen_resize([&](ui_adaptor& ui_skills) {
+        const unsigned int maxy = static_cast<unsigned>(TERMY);
+        skill_win_size_y = skill_win_size_y_max;
+        if (skill_win_size_y + infooffsetybottom > maxy) {
+            skill_win_size_y = maxy - infooffsetybottom;
+        }
+        w_skills = catacurses::newwin(skill_win_size_y, grid_width,
+            point(0, infooffsetybottom));
+        w_skills_border = catacurses::newwin(skill_win_size_y + 1, grid_width + 1,
+            point(0, infooffsetybottom));
+        border_skills.set(point(-1, infooffsetybottom - 1),
+            point(grid_width + 2, skill_win_size_y + 2));
+        ui_skills.position_from_window(w_skills_border);
+        });
+    ui_skills.mark_resize();
+    ui_skills.on_redraw([&](ui_adaptor& ui_skills) {
+        borders.draw_border(w_skills_border);
+        wnoutrefresh(w_skills_border);
+        ui_skills.disable_cursor();
+        draw_skills_tab(ui_skills, w_skills, *this, line, curtab, skillslist, ctxt);
+        });
+
+    // info panel
+    catacurses::window w_info;
+    catacurses::window w_info_border;
+    border_helper::border_info& border_info = borders.add_border();
+    ui_adaptor ui_info;
+    ui_info.on_screen_resize([&](ui_adaptor& ui_info) {
+        w_info = catacurses::newwin(info_win_size_y, FULL_SCREEN_WIDTH,
+            point(0, infooffsetytop));
+        w_info_border = catacurses::newwin(info_win_size_y + 1, FULL_SCREEN_WIDTH + 1,
+            point(0, infooffsetytop));
+        border_info.set(point(-1, infooffsetytop - 1),
+            point(FULL_SCREEN_WIDTH + 2, info_win_size_y + 2));
+        ui_info.position_from_window(w_info_border);
+        });
+    ui_info.mark_resize();
+    ui_info.on_redraw([&](ui_adaptor& ui_info) {
+        borders.draw_border(w_info_border);
+        wnoutrefresh(w_info_border);
+        ui_info.disable_cursor();
+        draw_info_window(w_info, *this, line, info_line, curtab,
+            speedlist, traitslist, bionicslist, effect_name_and_text, skillslist);
+        });
+
+    // SPEED
+    catacurses::window w_speed;
+    catacurses::window w_speed_border;
+    border_helper::border_info& border_speed = borders.add_border();
+    ui_adaptor ui_speed;
+    ui_speed.on_screen_resize([&](ui_adaptor& ui_speed) {
+        w_speed = catacurses::newwin(grid_height, grid_width, point(grid_width * 2 + 2, 1));
+        w_speed_border = catacurses::newwin(grid_height + 1, grid_width + 1,
+            point(grid_width * 2 + 2, 1));
+        border_speed.set(point(grid_width * 2 + 1, 0),
+            point(grid_width + 2, grid_height + 2));
+        ui_speed.position_from_window(w_speed_border);
+        });
+    ui_speed.mark_resize();
+    ui_speed.on_redraw([&](ui_adaptor& ui_speed) {
+        borders.draw_border(w_speed_border);
+        wnoutrefresh(w_speed_border);
+        ui_speed.disable_cursor();
+        draw_speed_tab(ui_speed, w_speed, line, curtab, *this, speedlist, move_cost);
+        });
+
+    bool done = false;
+
+    // needs to have the same windows in the same order as player_display_tab so that mouse scrolling can work
+    std::vector<catacurses::window*> windows{ &w_stats, &w_encumb, &w_speed, &w_skills, &w_traits, &w_bionics, &w_effects, &w_proficiencies };
+
+    do {
+        ui_manager::redraw_invalidated();
+
+        done = handle_player_display_action(*this, line, info_line, curtab, ctxt, ui_tip, ui_info,
+            ui_stats, ui_encumb, ui_speed, ui_traits, ui_bionics, ui_effects,
+            ui_skills, ui_proficiencies, speedlist, traitslist, bionicslist,
+            effect_name_and_text, skillslist, customize_character,
+            windows, w_tip, tip_btn_highlight);
+    } while (!done);
 }
