@@ -31,7 +31,7 @@ class nc_color;
 
 struct partial_con {
     int counter = 0;
-    std::list<item> components = {};
+    std::list<item> components;
     construction_id id = construction_id( -1 );
 };
 
@@ -133,5 +133,7 @@ std::vector<construction *> constructions_by_filter( std::function<bool( constru
         const &filter );
 void check_constructions();
 void finalize_constructions();
-
+std::vector<construction_id> find_build_sequence( const std::string &target_id,
+        std::function<bool( construction const & )> const &filter,
+        std::function<bool( construction const & )> const &can_build );
 #endif // CATA_SRC_CONSTRUCTION_H

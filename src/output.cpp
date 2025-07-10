@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cwctype>
 #include <map>
 #include <sstream>
 #include <stack>
@@ -37,6 +38,7 @@
 #include "sdltiles.h" // IWYU pragma: keep
 #include "string_formatter.h"
 #include "string_input_popup.h"
+#include "uilist.h"
 #include "ui_manager.h"
 #include "unicode.h"
 #include "units_utility.h"
@@ -182,7 +184,7 @@ std::vector<std::string> foldstring( const std::string &str, int width, const ch
     return lines;
 }
 
-std::vector<std::string> split_by_color( const std::string_view s )
+std::vector<std::string> split_by_color( std::string_view s )
 {
     std::vector<std::string> ret;
     std::vector<size_t> tag_positions = get_tag_positions( s );
@@ -196,7 +198,7 @@ std::vector<std::string> split_by_color( const std::string_view s )
     return ret;
 }
 
-std::string remove_color_tags( const std::string_view s )
+std::string remove_color_tags( std::string_view s )
 {
     std::string ret;
     std::vector<size_t> tag_positions = get_tag_positions( s );
@@ -215,7 +217,7 @@ std::string remove_color_tags( const std::string_view s )
 }
 
 color_tag_parse_result::tag_type update_color_stack(
-    std::stack<nc_color> &color_stack, const std::string_view seg,
+    std::stack<nc_color> &color_stack, std::string_view seg,
     const report_color_error color_error )
 {
     color_tag_parse_result tag = get_color_from_tag( seg, color_error );
@@ -236,7 +238,7 @@ color_tag_parse_result::tag_type update_color_stack(
 }
 
 void print_colored_text( const catacurses::window &w, const point &p, nc_color &color,
-                         const nc_color &base_color, const std::string_view text,
+                         const nc_color &base_color, std::string_view text,
                          const report_color_error color_error )
 {
     if( p.y > -1 && p.x > -1 ) {
@@ -907,20 +909,20 @@ query_ynq_result query_ynq( const std::string &text )
     return query_ynq_result::quit;
 }
 
-bool query_int( int &result, const std::string &text )
+bool query_int( int &result, bool show_default, const std::string &text )
 {
     string_input_popup popup;
     popup.title( text );
-    popup.text( "" ).only_digits( true );
-    int temp = popup.query_int();
-    if( popup.canceled() ) {
+    popup.text( show_default ? std::to_string( result ) : "" ).only_digits( true );
+    std::optional<int> temp = popup.query_int();
+    if( popup.canceled() || !temp ) {
         return false;
     }
-    result = temp;
+    result = *temp;
     return true;
 }
 
-std::vector<std::string> get_hotkeys( const std::string_view s )
+std::vector<std::string> get_hotkeys( std::string_view s )
 {
     std::vector<std::string> hotkeys;
     size_t start = s.find_first_of( '<' );
@@ -1040,14 +1042,14 @@ std::string string_replace( std::string text, const std::string &before, const s
 std::string replace_colors( std::string text )
 {
     static const std::vector<std::pair<std::string, std::string>> info_colors = {
-        {"info", get_all_colors().get_name( c_cyan )},
-        {"stat", get_all_colors().get_name( c_light_blue )},
-        {"header", get_all_colors().get_name( c_magenta )},
-        {"bold", get_all_colors().get_name( c_white )},
-        {"dark", get_all_colors().get_name( c_dark_gray )},
-        {"good", get_all_colors().get_name( c_green )},
-        {"bad", get_all_colors().get_name( c_red )},
-        {"neutral", get_all_colors().get_name( c_yellow )}
+        {"info", get_all_colors().get_name( c_info ) },
+        {"stat", get_all_colors().get_name( c_stat ) },
+        {"header", get_all_colors().get_name( c_header ) },
+        {"bold", get_all_colors().get_name( c_bold ) },
+        {"dark", get_all_colors().get_name( c_dark ) },
+        {"good", get_all_colors().get_name( c_good ) },
+        {"bad", get_all_colors().get_name( c_bad ) },
+        {"neutral", get_all_colors().get_name( c_neutral ) },
     };
 
     for( const auto &elem : info_colors ) {
@@ -1081,7 +1083,11 @@ static const std::vector<ItemFilterPrefix> item_filter_prefixes = {
     { 'f', to_translation( "freezerburn" ), to_translation( "<color_cyan>hidden flags</color> of an item" ) },
     { 's', to_translation( "devices" ), to_translation( "<color_cyan>skill</color> taught by books" ) },
     { 'd', to_translation( "pipe" ), to_translation( "<color_cyan>disassembled</color> components" ) },
+    { 'L', to_translation( "122 cm" ), to_translation( "can contain item of <color_cyan>length</color>" ) },
+    { 'V', to_translation( "450 ml" ), to_translation( "can contain item of <color_cyan>volume</color>" ) },
+    { 'M', to_translation( "250 kg" ), to_translation( "can contain item of <color_cyan>mass</color>" ) },
     { 'v', to_translation( "hand" ), to_translation( "covers <color_cyan>body part</color>" ) },
+    { 'e', to_translation( "close to skin" ), to_translation( "covers <color_cyan>layer</color>" ) },
     { 'b', to_translation( "mre;sealed" ), to_translation( "items satisfying <color_cyan>both</color> conditions" ) }
 };
 
@@ -1489,7 +1495,7 @@ static std::string trim( std::string_view s, Predicate pred )
 }
 
 template<typename Prep>
-std::string trim_trailing( const std::string_view s, Prep prep )
+std::string trim_trailing( std::string_view s, Prep prep )
 {
     return std::string( s.begin(), std::find_if_not(
     s.rbegin(), s.rend(), [&prep]( int c ) {
@@ -1497,14 +1503,14 @@ std::string trim_trailing( const std::string_view s, Prep prep )
     } ).base() );
 }
 
-std::string trim( const std::string_view s )
+std::string trim( std::string_view s )
 {
     return trim( s, []( int c ) {
         return isspace( c );
     } );
 }
 
-std::string trim_trailing_punctuations( const std::string_view s )
+std::string trim_trailing_punctuations( std::string_view s )
 {
     return trim_trailing( s, []( int c ) {
         // '<' and '>' are used for tags and should not be removed
@@ -1512,14 +1518,15 @@ std::string trim_trailing_punctuations( const std::string_view s )
     } );
 }
 
-std::string remove_punctuations( const std::string_view s )
+std::string remove_punctuations( const std::string &s )
 {
-    std::string result;
-    std::remove_copy_if( s.begin(), s.end(), std::back_inserter( result ),
-    []( unsigned char ch ) {
-        return std::ispunct( ch ) && ch != '_';
+    std::wstring ws = utf8_to_wstr( s );
+    std::wstring result;
+    std::remove_copy_if( ws.begin(), ws.end(), std::back_inserter( result ),
+    []( wchar_t ch ) {
+        return std::iswpunct( ch ) && ch != '_';
     } );
-    return result;
+    return wstr_to_utf8( result );
 }
 
 using char_t = std::string::value_type;
@@ -1532,7 +1539,7 @@ std::string to_upper_case( const std::string &s )
 }
 
 // find the position of each non-printing tag in a string
-std::vector<size_t> get_tag_positions( const std::string_view s )
+std::vector<size_t> get_tag_positions( std::string_view s )
 {
     std::vector<size_t> ret;
     size_t pos = s.find( "<color_", 0, 7 );
@@ -1629,7 +1636,7 @@ std::string word_rewrap( const std::string &in, int width, const uint32_t split 
     return o;
 }
 
-void draw_tab( const catacurses::window &w, int iOffsetX, const std::string_view sText,
+void draw_tab( const catacurses::window &w, int iOffsetX, std::string_view sText,
                bool bSelected )
 {
     int iOffsetXRight = iOffsetX + utf8_width( sText, true ) + 1;
@@ -2327,7 +2334,7 @@ void scrolling_text_view::draw( const nc_color &base_color )
     } else {
         text_view_scrollbar = scrollbar();
         // No scrollbar; we need to draw the window edge instead
-        mvwvline( w_, point_zero, BORDER_COLOR, LINE_XOXO, height );
+        mvwvline( w_, point::zero, BORDER_COLOR, LINE_XOXO, height );
     }
 
     nc_color color = base_color;
@@ -2979,7 +2986,7 @@ void insert_table( const catacurses::window &w, int pad, int line, int columns,
 std::string satiety_bar( const int calpereffv )
 {
     // Arbitrary max value we will cap our vague display to. Will be lower than the actual max value, but scaling fixes that.
-    constexpr float max_cal_per_effective_vol = 1500.0f;
+    constexpr float max_cal_per_effective_vol = 2000.0f;
     // Scaling the values.
     const float scaled_max = std::sqrt( max_cal_per_effective_vol );
     const float scaled_cal = std::sqrt( calpereffv );
@@ -3035,7 +3042,7 @@ scrollingcombattext::cSCT::cSCT( const point &p_pos, const direction p_oDir,
 
     dir = pairDirXY;
 
-    if( dir == point_zero ) {
+    if( dir == point::zero ) {
         // This would cause infinite loop otherwise
         oDir = direction::WEST;
         dir.x = -1;
@@ -3342,7 +3349,7 @@ std::string wildcard_trim_rule( const std::string &pattern_in )
 }
 
 // find substring (case insensitive)
-int ci_find_substr( const std::string_view str1, const std::string_view str2,
+int ci_find_substr( std::string_view str1, std::string_view str2,
                     const std::locale &loc )
 {
     std::string_view::const_iterator it =
@@ -3432,4 +3439,9 @@ void wprintz( const catacurses::window &w, const nc_color &FG, const std::string
     wattron( w, FG );
     wprintw( w, text );
     wattroff( w, FG );
+}
+
+std::string wrap60( const std::string &text )
+{
+    return string_join( foldstring( text, 60 ), "\n" );
 }

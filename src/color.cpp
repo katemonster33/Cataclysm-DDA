@@ -25,7 +25,7 @@
 #include "rng.h"
 #include "string_formatter.h"
 #include "translations.h"
-#include "ui.h"
+#include "uilist.h"
 #include "ui_manager.h"
 #include "cata_imgui.h"
 
@@ -630,7 +630,7 @@ std::string hilite_string( const std::string &text )
  * @param color The color to get, as a std::string.
  * @return The nc_color constant that matches the input.
  */
-nc_color color_from_string( const std::string_view color,
+nc_color color_from_string( std::string_view color,
                             const report_color_error color_error )
 {
     if( color.empty() ) {
@@ -713,7 +713,7 @@ nc_color bgcolor_from_string( const std::string &color )
     return i_white;
 }
 
-color_tag_parse_result get_color_from_tag( const std::string_view s,
+color_tag_parse_result get_color_from_tag( std::string_view s,
         const report_color_error color_error )
 {
     if( s.empty() || s[0] != '<' ) {
@@ -777,7 +777,7 @@ std::string get_note_string_from_color( const nc_color &color )
     return "Y";
 }
 
-nc_color get_note_color( const std::string_view note_id )
+nc_color get_note_color( std::string_view note_id )
 {
     // TODO in C++20 we can pass a string_view in directly rather than
     // constructing a string to use as the find argument
@@ -865,7 +865,7 @@ void color_manager::show_gui()
         w_colors_border = catacurses::newwin( FULL_SCREEN_HEIGHT, FULL_SCREEN_WIDTH,
                                               iOffset );
         w_colors_header = catacurses::newwin( iHeaderHeight, FULL_SCREEN_WIDTH - 2,
-                                              iOffset + point_south_east );
+                                              iOffset + point::south_east );
         w_colors = catacurses::newwin( iContentHeight, FULL_SCREEN_WIDTH - 2,
                                        iOffset + point( 1, iHeaderHeight + 1 ) );
 
@@ -913,7 +913,7 @@ void color_manager::show_gui()
         draw_header( w_colors_header );
 
         // Clear all lines
-        mvwrectf( w_colors, point_zero, c_black, ' ', 79, iContentHeight );
+        mvwrectf( w_colors, point::zero, c_black, ' ', 79, iContentHeight );
         for( int &iCol : vLines ) {
             mvwvline( w_colors, point( iCol, 0 ), BORDER_COLOR, LINE_XOXO, iContentHeight );
         }
